@@ -1,0 +1,461 @@
+from django.shortcuts import render
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework import generics
+from rest_framework import viewsets
+from .models import *
+from customerauth.models import wishlist_model
+from .serializers import *
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from products.models import Product,ProductRentalPrice,ProductReview
+from rest_framework.views import APIView
+from django.core.cache import cache
+from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
+from rest_framework.exceptions import NotFound
+from django.db.models import Q,Avg,Prefetch,Exists, OuterRef
+
+
+class GetHomeMainBanner(APIView):
+    serializer_class = HomeMainBannerSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return HomeMainBanner.objects.filter(is_active=True)
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            if not queryset.exists():
+                message = 'Şu anda anasayfa görsellerine ulaşılmıyor.'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+
+            serializer = self.serializer_class(queryset, many=True)
+            return Response({
+                "status": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+class GetHomeSubBanner(generics.ListAPIView):
+    serializer_class = HomeSubBannerSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return HomeSubBanner.objects.filter(is_active=True)
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            if not queryset.exists():
+                message = 'Şu anda anasayfa görsellerine ulaşılmıyor.'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+
+            serializer = self.serializer_class(queryset, many=True)
+            return Response({
+                "status": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class GetSocialMediaLinks(generics.ListAPIView):
+    serializer_class = SocialMediaSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return SocialMedia.objects.all()
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            if not queryset.exists():
+                message = 'Şu anda sosyal medya linklerine ulaşılmıyor.'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+
+            serializer = self.serializer_class(queryset, many=True)
+            return Response({
+                "status": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class CreateContactUs(generics.CreateAPIView):
+    serializer_class = ContactUsSerializer
+    permission_classes = [AllowAny]
+
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({'status':True, 'message': 'Mesajınız başarılı bir şekilde gönderildi.'}, status=HTTP_200_OK)
+            
+            if serializer.errors:
+                messages_list = []  
+                for key, value in serializer.errors.items(): 
+                    messages_list.append(value)  
+            return Response({"status": False, 'message': messages_list}, status=HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetAboutPage(generics.ListAPIView):
+    serializer_class = AboutPageSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return TeamMembers.objects.all().order_by('id')
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            if not queryset.exists():
+                message = 'Şu anda hakkımızda sayfasına ulaşılmıyor.'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+
+            serializer = self.serializer_class(queryset, many=True)
+            return Response({
+                "status": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+class CategoryAPIView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        try:
+            header_categories = get_category()
+            footer_categories = get_footer_category()
+            categories_data ={
+                "header_categories":header_categories,
+                "footer_categories_json":footer_categories
+            }
+            return Response({
+                "status": True,
+                "data": categories_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        
+
+
+def get_footer_category():
+    key = 'footer_categories_json'
+    footer_categories_json = cache.get(key)
+    if not footer_categories_json:
+        main_categories = Category.objects.filter(parent=None, is_active=True)
+        footer_categories_json = GetFooterCategorySerializer(main_categories, many=True).data
+        cache.set(key, footer_categories_json, 60 * 60 * 6)
+    return footer_categories_json
+
+
+def get_category():
+    key = 'main_categories_json'
+    main_categories_json = cache.get(key)
+    
+    if not main_categories_json:
+        main_categories = Category.objects.filter(parent=None, is_active=True).prefetch_related('children')
+        main_categories_json = GetCategorySerializer(main_categories, many=True).data
+        cache.set(key, main_categories_json, 60 * 60 * 6)
+        
+    return main_categories_json
+
+
+class HomepageProductsView(APIView):
+    serializer_class = CategoryProductSerializers
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            key = 'homepage_products'
+            cached_products = cache.get(key)
+
+            if cached_products:
+                return Response(cached_products)
+            
+            best_seller_products = Product.objects.filter(
+                is_active=True, best_seller=True
+            ).prefetch_related('related_products')[:16]
+            
+            featured_products = Product.objects.filter(
+                is_active=True, is_featured=True
+            ).prefetch_related('related_products')[:16]
+            
+            latest_products = Product.objects.filter(
+                is_active=True
+            ).order_by('-created_at').prefetch_related('related_products')[:16]
+
+            serialized_data = {
+                'best_seller_products': CategoryProductSerializers(best_seller_products, many=True).data,
+                'featured_products': CategoryProductSerializers(featured_products, many=True).data,
+                'latest_products': CategoryProductSerializers(latest_products, many=True).data,
+            }
+            cache.set(key, serialized_data, 60 * 60 * 6)  
+            return Response({
+                "status": True,
+                "data": serialized_data
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class GetBrand(APIView):
+    serializer_class = GetBrandSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Brand.objects.filter(is_active=True).exclude(image__isnull=True).exclude(image='')
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            if not queryset.exists():
+                message = 'Şu anda markalara ulaşılmıyor.'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+
+            serializer = self.serializer_class(queryset, many=True)
+            return Response({
+                "status": True,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+
+class GetCategoryProductListView(generics.ListAPIView):
+    serializer_class = CategoryProductSerializers
+    permission_classes = [AllowAny]
+
+
+    def get_queryset(self): 
+        category_slug = self.kwargs.get('slug')
+
+        queryset = Product.objects.filter(category='25', is_active=True)
+        if not queryset.exists():
+            raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
+        return queryset
+
+
+
+class ProductSearchView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, query, format=None):
+        try:
+            if query:
+                query_terms = query.split()
+
+                search_criteria = Q(is_active=True)
+
+                for term in query_terms:
+                    search_criteria &= (
+                        Q(name__icontains=term) |
+                        Q(description__icontains=term) |
+                        Q(information__icontains=term)
+                    )
+
+                products = Product.objects.filter(search_criteria).order_by('id')
+
+                if products:
+                    categories = {product.category.id: product.category for product in products}  
+                    category_list = list(categories.values())  
+
+                    serializer = CategoryProductSerializers(products, many=True)
+                    
+                    data ={
+                        "products": serializer.data,
+                        "categories": ProductWithCategoriesSerializer(category_list, many=True).data  
+                    }
+                
+                    return Response({
+                        "status": True,
+                        "data": data
+                    }, status=status.HTTP_200_OK)
+                
+
+                message = 'Ürün Bulunmadı!'
+                tags = "success"
+                return Response({
+                    "status": True,
+                    "messages": [{'message': message, 'tags': tags}]
+                }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class SubscribeView(APIView):
+    serializer_class = SubscriptionSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            serializer = SubscriptionSerializer(data=request.data)
+            if serializer.is_valid(): 
+                email = serializer.validated_data['email']  
+                subscription, created = Subscription.objects.get_or_create(email=email)
+                if created:
+                    return Response({ "status": True, "messages": "Abonelik işlemi başarıyla tamamlandı."}, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({ "status": True, "messages": "Bu e-posta adresi zaten kayıtlı."}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class RentalProductView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, format=None):
+        try:
+            products = Product.objects.filter(
+            is_active=True
+                ).annotate(
+                    has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
+                ).filter(
+                    has_rental_price=True  # Sadece kiralama fiyatı olan ürünleri seçiyoruz
+                ).select_related('category').prefetch_related(
+                    Prefetch('related_products', queryset=ProductImage.objects.all()),
+                    Prefetch('reviews', queryset=ProductReview.objects.all()),
+                    Prefetch('wishes', queryset=wishlist_model.objects.all())
+                ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
+            
+            if products:
+                categories = {product.category.id: product.category for product in products}  
+                category_list = list(categories.values())  
+                serializer = CategoryProductSerializers(products, many=True)
+                data ={
+                    "products": serializer.data,
+                    "categories": ProductWithCategoriesSerializer(category_list, many=True).data  
+                }
+                return Response({
+                    "status": True,
+                    "data": data
+                }, status=status.HTTP_200_OK)
+
+            message = 'Ürün Bulunmadı!'
+            tags = "success"
+            return Response({
+                "status": True,
+                "messages": [{'message': message, 'tags': tags}]
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class SalesProductView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, format=None):
+        try:
+            products = Product.objects.filter(
+            is_active=True
+            ).select_related('category').prefetch_related(
+                Prefetch('related_products', queryset=ProductImage.objects.all()),
+                Prefetch('reviews', queryset=ProductReview.objects.all()),
+                Prefetch('wishes', queryset=wishlist_model.objects.all())
+            ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
+                
+            if products:
+                categories = {product.category.id: product.category for product in products}  
+                category_list = list(categories.values())  
+
+                serializer = CategoryProductSerializers(products, many=True)
+                
+                data = {
+                    "products": serializer.data,
+                    "categories": ProductWithCategoriesSerializer(category_list, many=True).data  
+                }
+                return Response({
+                    "status": True,
+                    "data": data
+                }, status=status.HTTP_200_OK)
+            
+            message = 'Ürün Bulunmadı!'
+            tags = "success"
+            return Response({
+                "status": True,
+                "messages": [{'message': message, 'tags': tags}]
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+
+
+
+
+
+
