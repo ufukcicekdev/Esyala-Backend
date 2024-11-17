@@ -2,11 +2,13 @@ from django.contrib import admin
 from django.urls import path,include
 from django.conf.urls.static import static
 from esyala.settings import *
+from django.contrib.auth import views as auth_views
 
 from esyala.views import CustomSpectacularAPIView, CustomSpectacularSwaggerView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('admin-api-login/', auth_views.LoginView.as_view(), name='admin_login'),
     path("blog/", include("blog.urls")), 
     path("main/", include("main.urls")),
     path("products/", include("products.urls")),

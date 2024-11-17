@@ -13,7 +13,6 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from customerauth.models import *
 
-
 class VerifyEmailView(APIView):
     def get(self, request, uidb64, token):
         try:
@@ -211,3 +210,5 @@ class ChangeEmailAPIView(APIView):
                 "status": False,
                 "messages": messages_list
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+

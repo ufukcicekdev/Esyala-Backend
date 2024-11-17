@@ -211,6 +211,8 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES':('rest_framework.renderers.JSONRenderer',),
 
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,
     
 }
 
@@ -312,3 +314,27 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     }
 }
+
+
+
+
+
+AUTH_COOKIE = 'access'
+AUTH_COOKIE_MAX_AGE = 60 * 60 * 24
+AUTH_COOKIE_SECURE = os.getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
+AUTH_COOKIE_HTTP_ONLY = True
+AUTH_COOKIE_PATH = '/'
+AUTH_COOKIE_SAMESITE = 'None'
+
+
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST_PROD')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER_PROD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD_PROD')
+EMAIL_PORT = 535
+EMAIL_USE_SSL = False
+EMAIL_USE_TLS = True

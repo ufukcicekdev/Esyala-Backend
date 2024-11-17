@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
@@ -13,7 +13,10 @@ from django.core.cache import cache
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from rest_framework.exceptions import NotFound
 from django.db.models import Q,Avg,Prefetch,Exists, OuterRef
-
+from rest_framework.pagination import PageNumberPagination
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
+from django.utils.decorators import method_decorator
 
 class GetHomeMainBanner(APIView):
     serializer_class = HomeMainBannerSerializer
@@ -75,7 +78,8 @@ class GetHomeSubBanner(generics.ListAPIView):
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetSocialMediaLinks(generics.ListAPIView):
     serializer_class = SocialMediaSerializer
     permission_classes = [AllowAny]
@@ -129,7 +133,8 @@ class CreateContactUs(generics.CreateAPIView):
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+@method_decorator(cache_page(60 * 60 * 24), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetAboutPage(generics.ListAPIView):
     serializer_class = AboutPageSerializer
     permission_classes = [AllowAny]
@@ -162,20 +167,16 @@ class GetAboutPage(generics.ListAPIView):
 
 
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class CategoryAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, *args, **kwargs):
         try:
             header_categories = get_category()
-            footer_categories = get_footer_category()
-            categories_data ={
-                "header_categories":header_categories,
-                "footer_categories_json":footer_categories
-            }
             return Response({
                 "status": True,
-                "data": categories_data
+                "data": header_categories
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -184,6 +185,25 @@ class CategoryAPIView(APIView):
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+class FooterCategoryAPIView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        try:
+            footer_categories = get_footer_category()
+            
+            return Response({
+                "status": True,
+                "data": footer_categories
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 
@@ -283,18 +303,77 @@ class GetBrand(APIView):
     
 
 
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetCategoryProductListView(generics.ListAPIView):
     serializer_class = CategoryProductSerializers
     permission_classes = [AllowAny]
+    pagination_class = PageNumberPagination 
 
+    def get_queryset(self):
+        category_slug = self.kwargs.get('category_slugs')  
+        if category_slug == 'rental':
+            queryset = Product.objects.filter(
+            is_active=True
+                ).annotate(
+                    has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
+                ).filter(
+                    has_rental_price=True  
+                ).select_related('category').prefetch_related(
+                    Prefetch('related_products', queryset=ProductImage.objects.all()),
+                    Prefetch('reviews', queryset=ProductReview.objects.all()),
+                    Prefetch('wishes', queryset=wishlist_model.objects.all())
+                ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
+            if not queryset.exists():
+                raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
 
-    def get_queryset(self): 
-        category_slug = self.kwargs.get('slug')
+            return queryset
+                
+        else:
+            category_slug_list = category_slug.split('/')
+            main_category = get_object_or_404(Category, slug=category_slug_list[0])
+            subcategories = main_category.children.all()
+            if len(category_slug_list) == 1:
+                category_query = Q(category__in=main_category.children.all())
+            else:
+                target_category = get_object_or_404(Category, slug=category_slug_list[-1])
+                category_query = Q(category=target_category)
 
-        queryset = Product.objects.filter(category='25', is_active=True)
-        if not queryset.exists():
-            raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
-        return queryset
+            queryset = Product.objects.filter(category_query, is_active=True).select_related('category').annotate(average_rating=Avg('reviews__rating')).order_by('id')
+
+            if not queryset.exists():
+                raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
+
+            return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)  # Sayfalama işlemi
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response({
+                "status": True,
+                "data": {
+                    "product": serializer.data,
+                    "category": {
+                        "name": self.kwargs.get('category_slugs').split('/')[-1],
+                        "slug": self.kwargs.get('category_slugs'),
+                    },
+                }
+            })
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "status": True,
+            "data": {
+                "product": serializer.data,
+                "category": {
+                    "name": self.kwargs.get('category_slugs').split('/')[-1],
+                    "slug": self.kwargs.get('category_slugs'),
+                }
+            }
+        }, status=status.HTTP_200_OK)
 
 
 
@@ -380,7 +459,7 @@ class RentalProductView(APIView):
                 ).annotate(
                     has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
                 ).filter(
-                    has_rental_price=True  # Sadece kiralama fiyatı olan ürünleri seçiyoruz
+                    has_rental_price=True  
                 ).select_related('category').prefetch_related(
                     Prefetch('related_products', queryset=ProductImage.objects.all()),
                     Prefetch('reviews', queryset=ProductReview.objects.all()),

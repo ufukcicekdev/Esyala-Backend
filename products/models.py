@@ -14,7 +14,7 @@ from django_ckeditor_5.fields import CKEditor5Field
 from django.urls import reverse
 import math
 from django.db.models import Avg
-
+from bs4 import BeautifulSoup
 
 # Oda Tipleri (Living Room, Bedroom, Kitchen vb.)
 class RoomType(models.Model):

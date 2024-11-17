@@ -7,7 +7,12 @@ from rest_framework.permissions import AllowAny
 from .serializers import GetBlogsSerializer, GetBlogCategorySerializer, GetBlogDetailSerializer
 from blog.models import Blog, Category
 from rest_framework.views import APIView
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
+from django.utils.decorators import method_decorator
 
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetBlogsView(APIView):
     serializer_class = GetBlogsSerializer
     permission_classes = [AllowAny]
@@ -39,7 +44,8 @@ class GetBlogsView(APIView):
 
 
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetPopularBlogsViews(APIView):
     serializer_class = GetBlogsSerializer
     permission_classes = [AllowAny]
@@ -70,7 +76,8 @@ class GetPopularBlogsViews(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetBlogsCategoriesView(APIView):
     serializer_class = GetBlogCategorySerializer
     permission_classes = [AllowAny]
@@ -102,7 +109,8 @@ class GetBlogsCategoriesView(APIView):
 
 
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetBlogDetailViews(APIView):
     serializer_class = GetBlogDetailSerializer
     permission_classes = [AllowAny]
@@ -140,7 +148,8 @@ class GetBlogDetailViews(APIView):
 
 
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetCategoryBlogsViews(generics.ListAPIView):
     serializer_class = GetBlogsSerializer  
     permission_classes = [AllowAny]

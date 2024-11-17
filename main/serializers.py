@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from products.models import Product, Brand, Supplier, Category, ProductImage, RoomType, HomeType, HomeModel, SpaceDefinition, TimeRange
 import re
 from drf_spectacular.utils import extend_schema_field
-
+from bs4 import BeautifulSoup
 
 class HomeMainBannerSerializer(serializers.ModelSerializer):
     class Meta():
@@ -119,7 +119,7 @@ class GetCategorySerializer(serializers.ModelSerializer):
 class GetFooterCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = "__all__"
+        fields = ["name", "slug"]
 
 
 class GetBrandSerializer(serializers.ModelSerializer):
@@ -159,6 +159,7 @@ class CategoryProductSerializers(serializers.ModelSerializer):
     category = ProductWithCategoriesSerializer()
     first_image =  serializers.SerializerMethodField() 
     discount_percentage = serializers.SerializerMethodField()
+    truncated_description = serializers.SerializerMethodField()
     star_list = serializers.SerializerMethodField()
     room_types = RoomTypeSerializer(many=True, read_only=True)
     home_types = HomeTypeSerializer(many=True, read_only=True)
@@ -169,7 +170,7 @@ class CategoryProductSerializers(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'slug', 'first_image', 'selling_price','selling_old_price','purchase_price',
                 'in_stock', 'brand', 'supplier', 'category','view_count', 'discount_percentage','star_list', 
-                'room_types','home_types','home_models', 'space_definitions','time_ranges'] 
+                'room_types','home_types','home_models', 'space_definitions','time_ranges','truncated_description'] 
     def get_categories(self, obj):
         active_categories = obj.category.filter(is_active=True)
         return ProductWithCategoriesSerializer(active_categories, many=True).data
@@ -186,6 +187,11 @@ class CategoryProductSerializers(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField) 
     def get_star_list(self, obj):
         return obj.get_star_list() 
+    
+    @extend_schema_field(serializers.CharField) 
+    def get_truncated_description(self, obj):
+        return obj.truncated_description() 
+
 
 
 

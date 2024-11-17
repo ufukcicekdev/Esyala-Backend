@@ -12,6 +12,8 @@ urlpatterns = [
     path('homepage_products/', HomepageProductsView.as_view(), name='homepage_products'),
     path('about/', GetAboutPage.as_view(), name='get_team_members'),
     path('get_category/', CategoryAPIView.as_view(), name='get_category'),
+    path('get_footer_category/', FooterCategoryAPIView.as_view(), name='get_footer_category'),
+
     path('get_brand/', GetBrand.as_view(), name='get_brand'),
 
     path("category/<path:category_slugs>/", GetCategoryProductListView.as_view(), name="get_category_product_list"),
