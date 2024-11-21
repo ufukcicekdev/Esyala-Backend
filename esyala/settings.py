@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["*","esyala-backend.railway.internal"]
+ALLOWED_HOSTS = ["*","esyala-backend-production.up.railway.app"]
 
 
 # Application definition
