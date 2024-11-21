@@ -50,7 +50,7 @@ class ContactUsSerializer(serializers.ModelSerializer):
         return value
     
     def validate_phone(self, value):
-        if not re.match(r'^\+?[1-9]\d{1,14}$', value):
+        if not re.match(r'^\+?[0-9]\d{1,10}$', value):
             raise serializers.ValidationError("Lütfen geçerli bir telefon numarası girin.")
         return value
 

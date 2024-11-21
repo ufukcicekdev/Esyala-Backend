@@ -17,7 +17,10 @@ from rest_framework.pagination import PageNumberPagination
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
 from django.utils.decorators import method_decorator
+from slack_send_messages.send_messages import send_contact_message
 
+@method_decorator(cache_page(60 * 60 * 12), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetHomeMainBanner(APIView):
     serializer_class = HomeMainBannerSerializer
     permission_classes = [AllowAny]
@@ -120,17 +123,28 @@ class CreateContactUs(generics.CreateAPIView):
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                return Response({'status':True, 'message': 'Mesajınız başarılı bir şekilde gönderildi.'}, status=HTTP_200_OK)
+
+                contact_data = {
+                    'full_name': serializer.validated_data['full_name'],
+                    'email': serializer.validated_data['email'],
+                    'phone': serializer.validated_data['phone'],
+                    'subject': serializer.validated_data['subject'],
+                    'message': serializer.validated_data['message'],
+                }
+    
+                send_contact_message(contact_data)
+                return Response({'status':True, 'messages': 'Mesajınız başarılı bir şekilde gönderildi.'}, status=HTTP_200_OK)
             
             if serializer.errors:
                 messages_list = []  
                 for key, value in serializer.errors.items(): 
+                    print(value)
                     messages_list.append(value)  
-            return Response({"status": False, 'message': messages_list}, status=HTTP_400_BAD_REQUEST)
+            return Response({"status": False, 'messages': messages_list}, status=HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({
                 "status": False,
-                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+                "messages": [{'Bir hata oluştu: {}'.format(str(e)) }]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @method_decorator(cache_page(60 * 60 * 24), name='dispatch')  # 6 saatlik cache
@@ -440,7 +454,7 @@ class SubscribeView(APIView):
                 if created:
                     return Response({ "status": True, "messages": "Abonelik işlemi başarıyla tamamlandı."}, status=status.HTTP_201_CREATED)
                 else:
-                    return Response({ "status": True, "messages": "Bu e-posta adresi zaten kayıtlı."}, status=status.HTTP_200_OK)
+                    return Response({ "status": False, "messages": "Bu e-posta adresi zaten kayıtlı."}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
