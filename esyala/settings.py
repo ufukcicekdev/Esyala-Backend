@@ -183,6 +183,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # veya belirli bir origin'e izin vermek için
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React uygulamanızın adresi
+    "https://esyala-backend-production.up.railway.app"
 ]
 
 # İstemci tarafından gönderilen kimlik doğrulama bilgilerini içeren CORS isteklerine izin vermek için
