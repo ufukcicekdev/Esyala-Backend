@@ -285,7 +285,8 @@ class HomepageProductsView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class GetBrand(APIView):
     serializer_class = GetBrandSerializer
     permission_classes = [AllowAny]

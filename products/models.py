@@ -93,6 +93,7 @@ class Category(models.Model):
     img_alt = models.CharField(max_length=255, verbose_name="Resim Alt Metni")
     img_title = models.CharField(max_length=255, verbose_name="Resim Başlığı")
     is_active = models.BooleanField(default=True, verbose_name="Aktif mi")
+    iconSvg = models.TextField(verbose_name="Katgori İkon", null=True, blank=True)
         
 
     def product_count(self):
