@@ -251,12 +251,6 @@ PASSWORD_RESET_TIMEOUT = 900
 
 
 
-
-
-
-
-
-
 #jazzmin
 
 JAZZMIN_SETTINGS = {

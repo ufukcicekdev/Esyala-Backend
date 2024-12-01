@@ -318,8 +318,8 @@ class GetBrand(APIView):
     
 
 
-@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
-@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')
+@method_decorator(vary_on_cookie, name='dispatch')
 class GetCategoryProductListView(generics.ListAPIView):
     serializer_class = CategoryProductSerializers
     permission_classes = [AllowAny]
@@ -328,42 +328,58 @@ class GetCategoryProductListView(generics.ListAPIView):
     def get_queryset(self):
         category_slug = self.kwargs.get('category_slugs')  
         if category_slug == 'rental':
+            # Handle rental-specific case
             queryset = Product.objects.filter(
-            is_active=True
-                ).annotate(
-                    has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
-                ).filter(
-                    has_rental_price=True  
-                ).select_related('category').prefetch_related(
-                    Prefetch('related_products', queryset=ProductImage.objects.all()),
-                    Prefetch('reviews', queryset=ProductReview.objects.all()),
-                    Prefetch('wishes', queryset=wishlist_model.objects.all())
-                ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
-            if not queryset.exists():
-                raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
+                is_active=True
+            ).annotate(
+                has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
+            ).filter(
+                has_rental_price=True
+            ).select_related('category').prefetch_related(
+                Prefetch('related_products', queryset=ProductImage.objects.all()),
+                Prefetch('reviews', queryset=ProductReview.objects.all()),
+                Prefetch('wishes', queryset=wishlist_model.objects.all())
+            ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
 
+
+            
             return queryset
-                
+
         else:
+            # Handle normal category and subcategory case
             category_slug_list = category_slug.split('/')
             main_category = get_object_or_404(Category, slug=category_slug_list[0])
+
             subcategories = main_category.children.all()
+
+            breadcrumb_categories = [{
+                "name": main_category.name,
+                "slug": main_category.slug
+            }]
+
             if len(category_slug_list) == 1:
                 category_query = Q(category__in=main_category.children.all())
             else:
                 target_category = get_object_or_404(Category, slug=category_slug_list[-1])
+                breadcrumb_categories.append({
+                    "name": target_category.name,
+                    "slug": target_category.slug
+                })
                 category_query = Q(category=target_category)
 
-            queryset = Product.objects.filter(category_query, is_active=True).select_related('category').annotate(average_rating=Avg('reviews__rating')).order_by('id')
+            queryset = Product.objects.filter(category_query, is_active=True).select_related('category').order_by('id')
 
-            if not queryset.exists():
-                raise NotFound(detail="Bu kategoriye ait aktif ürün bulunamadı.")
+ 
 
             return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)  # Sayfalama işlemi
+        page = self.paginate_queryset(queryset)
+
+        product_count = queryset.count()
+
+        breadcrumb_categories, subcategories = self.get_breadcrumb_and_subcategories()
 
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -371,24 +387,67 @@ class GetCategoryProductListView(generics.ListAPIView):
                 "status": True,
                 "data": {
                     "product": serializer.data,
+                    "product_count": product_count,
+                    "pagination": {
+                        "next": self.paginator.get_next_link(),
+                        "previous": self.paginator.get_previous_link(),
+                        "page": request.query_params.get('page', 1),
+                        "total_pages": self.paginator.page.paginator.num_pages,
+                    },
                     "category": {
-                        "name": self.kwargs.get('category_slugs').split('/')[-1],
-                        "slug": self.kwargs.get('category_slugs'),
+                        "breadcrumb": breadcrumb_categories, 
+                        "subcategories": [
+                            {"name": sub.name, "slug": sub.slug} for sub in subcategories
+                        ],
                     },
                 }
             })
 
+        # If no page, return everything
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "status": True,
             "data": {
                 "product": serializer.data,
+                "product_count": product_count,
                 "category": {
-                    "name": self.kwargs.get('category_slugs').split('/')[-1],
-                    "slug": self.kwargs.get('category_slugs'),
+                    "breadcrumb": breadcrumb_categories, 
+                    "subcategories": [
+                        {"name": sub.name, "slug": sub.slug} for sub in subcategories
+                    ],
                 }
             }
         }, status=status.HTTP_200_OK)
+
+    def get_breadcrumb_and_subcategories(self):
+        # Handle breadcrumbs and subcategories
+        category_slug = self.kwargs.get('category_slugs')
+        breadcrumb_categories = []
+        subcategories = []
+        
+        if category_slug == 'rental':
+            breadcrumb_categories = [{
+                "name": "Kiralık Ürünler",
+                "slug": "rental"
+            }]
+            subcategories = []  # No subcategories for rental
+        else:
+            category_slug_list = category_slug.split('/')
+            main_category = get_object_or_404(Category, slug=category_slug_list[0])
+            breadcrumb_categories.append({
+                "name": main_category.name,
+                "slug": main_category.slug
+            })
+            subcategories = main_category.children.all()
+
+            for slug in category_slug_list[1:]:
+                category = get_object_or_404(Category, slug=slug)
+                breadcrumb_categories.append({
+                    "name": category.name,
+                    "slug": category.slug
+                })
+
+        return breadcrumb_categories, subcategories
 
 
 
@@ -439,8 +498,6 @@ class ProductSearchView(APIView):
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
-
 
 class SubscribeView(APIView):
     serializer_class = SubscriptionSerializer
@@ -547,9 +604,3 @@ class SalesProductView(APIView):
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-
-
-
-
-
-

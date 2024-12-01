@@ -10,6 +10,7 @@ from .OrderProcess.orderViews import *
 
 urlpatterns = [
     path('user/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('user/auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('user/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/register/', UserRegistrationView.as_view(), name='auth_register'),
     path('user/login/',UserLoginView.as_view(),name="login"),

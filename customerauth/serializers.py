@@ -13,18 +13,21 @@ from django.contrib.auth import get_user_model, authenticate, update_session_aut
 User = get_user_model()
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
- 
     @classmethod
     def get_token(cls, user):
+        # Token oluşturuluyor
         token = super().get_token(user)
 
+        # Kullanıcı bilgilerini ekliyoruz
         token['username'] = user.username
         token['email'] = user.email
-        token['username'] = user.username
+        
+        # Vendor bilgisi ekleniyor, ancak vendor yoksa 0 olarak ekleniyor
         try:
             token['vendor_id'] = user.vendor.id
-        except:
+        except AttributeError:
             token['vendor_id'] = 0
+        
         return token
     
 

@@ -107,7 +107,7 @@ class GetCategorySerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     class Meta:
         model = Category
-        fields = ["name", "slug", "children"]
+        fields = ["name", "slug", "children", "image"]
 
 
     def get_children(self, obj):

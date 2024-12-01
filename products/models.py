@@ -230,6 +230,38 @@ class Product(models.Model):
             category = category.parent
         return breadcrumbs
     
+    def get_category_breadcrumb2(self):
+        def get_all_children(category):
+            children = []
+            for child in category.children.all(): 
+                children.append({
+                    "name": child.name,
+                    "slug": child.get_full_path_slug(),
+                })
+                children.extend(get_all_children(child))
+            return children
+
+        breadcrumbs = {
+            "main_category": None,  
+            "sub_categories": [],   
+        }
+        
+        category = self.category
+
+        while category:
+            if category.parent is None:
+                # Ana kategori
+                breadcrumbs["main_category"] = {
+                    "name": category.name,
+                    "slug": category.get_full_path_slug(),
+                }
+         
+                breadcrumbs["sub_categories"] = get_all_children(category)
+            category = category.parent
+
+        return breadcrumbs
+
+    
     def truncated_description(self, length=100):
         # HTML içeriğini düzgün bir şekilde dilimlemek için BeautifulSoup kullanıyoruz
         soup = BeautifulSoup(self.information, "html.parser")

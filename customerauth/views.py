@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from customerauth.models import *
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class VerifyEmailView(APIView):
     def get(self, request, uidb64, token):
@@ -29,6 +30,25 @@ class VerifyEmailView(APIView):
                 return Response({"status":True,"message": "E-posta zaten doğrulanmış."}, status=status.HTTP_400_BAD_REQUEST)
         except (User.DoesNotExist, BadSignature, SignatureExpired):
             return Response({"status":False,"messages": "Doğrulama bağlantısı geçersiz veya süresi dolmuş."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class TokenVerifyView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+      
+        user = request.user
+        return Response({
+            "message": "Token is valid",
+            "user": {
+                "username": user.username,
+                "email": user.email,
+                "vendor_id": getattr(user, 'vendor', None).id if hasattr(user, 'vendor') else None
+            }
+        })
 
 
 
