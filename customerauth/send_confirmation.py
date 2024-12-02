@@ -14,7 +14,9 @@ def generate_verification_link(user, request):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     
     # Doğrulama bağlantısı
-    verification_url = f"{request.scheme}://{request.get_host()}/customerauth/user/verify/{uid}/{token}/"
+    #verification_url = f"{request.scheme}://{request.get_host()}/customerauth/user/verify/{uid}/{token}/"
+
+    verification_url = f"http://localhost:3000/verify-email/{uid}/{token}/"
     return verification_url
 
 

@@ -16,22 +16,49 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class VerifyEmailView(APIView):
     def get(self, request, uidb64, token):
+        print("uidb64",uidb64)
+        print("token",token)
+
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
             signer = TimestampSigner()
+            
             user_pk = signer.unsign(token, max_age=86400)  # 24 saat geçerli
             user = User.objects.get(pk=user_pk)
-            
+
             if not user.email_verified:
                 user.email_verified = True
                 user.save()
-                return Response({ "status":True, "message": "E-posta adresiniz doğrulandı!"}, status=status.HTTP_200_OK)
+                return Response(
+                    {"status": True, "message": "E-posta adresiniz başarıyla doğrulandı!"},
+                    status=status.HTTP_200_OK
+                )
             else:
-                return Response({"status":True,"message": "E-posta zaten doğrulanmış."}, status=status.HTTP_400_BAD_REQUEST)
-        except (User.DoesNotExist, BadSignature, SignatureExpired):
-            return Response({"status":False,"messages": "Doğrulama bağlantısı geçersiz veya süresi dolmuş."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"status": True, "message": "E-posta zaten doğrulanmış."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-
+        except SignatureExpired:
+            return Response(
+                {"status": False, "message": "Doğrulama bağlantısının süresi dolmuş. Lütfen yeniden e-posta doğrulama isteğinde bulunun."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except BadSignature:
+            return Response(
+                {"status": False, "message": "Doğrulama bağlantısı geçersiz. Lütfen doğru bağlantıyı kullandığınızdan emin olun."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except User.DoesNotExist:
+            return Response(
+                {"status": False, "message": "Kullanıcı bulunamadı. Lütfen doğru bağlantıyı kullandığınızdan emin olun."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"status": False, "message": "Bir hata oluştu. Lütfen tekrar deneyin."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class TokenVerifyView(APIView):
