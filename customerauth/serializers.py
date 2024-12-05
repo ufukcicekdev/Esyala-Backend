@@ -282,3 +282,16 @@ class EmailChangeSerializer(serializers.Serializer):
         if data['new_email'] == data['old_email']:
             raise serializers.ValidationError({"new_email": "Yeni e-posta adresi eski e-posta adresinizle aynı olamaz."})
         return data
+    
+
+
+
+
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+class PasswordResetVerifySerializer(serializers.Serializer):
+    email= serializers.EmailField(required=True)
+    otp = serializers.CharField(max_length=6, required=True)

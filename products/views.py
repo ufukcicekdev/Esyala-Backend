@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .models import Product, ProductReview
-from .serializers import ProductSerializer
+from .serializers import ProductSerializer, ProductListSerializer
 from customerauth.models import UserProductView
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
@@ -29,4 +29,17 @@ class ProductDetailView(APIView):
         product_data = ProductSerializer(product, context={'request': request}).data
         product_data['average_rating'] = average_rating
         
+        return Response(product_data)
+
+
+
+
+
+class ProductListView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request, product_slug=None): 
+        product = Product.objects.filter(is_active=True)
+        product_data = ProductListSerializer(product, many=True, context={'request': request}).data
+
         return Response(product_data)

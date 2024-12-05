@@ -259,3 +259,77 @@ class ChangeEmailAPIView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
 
+
+
+
+def generate_otp():
+    return ''.join(random.choices('0123456789', k=6))
+
+class PasswordResetRequestAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Gelen isteği serializer ile doğrulama
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = User.objects.get(email=email)  # Kullanıcıyı bulma
+                otp = generate_otp()  # OTP üretme
+                PasswordReset.objects.create(user=user, otp=otp)  # OTP'yi veritabanına kaydetme
+                
+                # E-posta içeriğini oluşturma
+                context = {
+                    'username': user.username,
+                    'otp': otp,
+                }
+                email_content = render_to_string('email_templates/reset_password_email.html', context)
+                
+   
+                send_change_password_email([user.email], "Hesap Doğrulama", email_content)
+
+
+                return Response({"message": "Doğrulama kodunuz e-posta adresinize gönderildi."}, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                return Response({"error": "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetVerifyAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Gelen isteği doğrulama
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            otp = serializer.validated_data['otp']
+            
+            try:
+                # OTP kontrolü
+                password_reset = PasswordReset.objects.get(user__email=email, otp=otp)
+                return Response({"message": "OTP doğrulandı. Şifrenizi değiştirebilirsiniz."}, status=status.HTTP_200_OK)
+            except PasswordReset.DoesNotExist:
+                return Response({"error": "Geçersiz OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+class PasswordResetChangePasswordAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Yeni şifreyi alalım
+        new_password = request.data.get("new_password")
+        otp = request.data.get("otp")
+        email = request.data.get("email")
+        
+        try:
+            # OTP ve kullanıcının şifresini kontrol et
+            password_reset = PasswordReset.objects.get(user__email=email, otp=otp)
+            user = password_reset.user
+            
+            # Yeni şifreyi kullanıcıya atama
+            user.set_password(new_password)
+            user.save()
+            
+            # OTP'yi geçersiz kılma
+            password_reset.delete()
+
+            return Response({"message": "Şifreniz başarıyla güncellendi."}, status=status.HTTP_200_OK)
+        except PasswordReset.DoesNotExist:
+            return Response({"error": "Geçersiz OTP."}, status=status.HTTP_400_BAD_REQUEST)

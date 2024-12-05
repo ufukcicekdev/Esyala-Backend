@@ -19,6 +19,11 @@ urlpatterns = [
 
 
 
+    path('user/password-reset-request/', PasswordResetRequestAPIView.as_view(), name='password_reset_request_api'),
+    path('user/password-reset-verify/', PasswordResetVerifyAPIView.as_view(), name='password_reset_verify_api'),
+    path('user/password-reset-change-password/', PasswordResetChangePasswordAPIView.as_view(), name='password_reset_verify_api'),
+
+
     #UserProfile
     path('user/profile/update/', ProfileUpdateAPIView.as_view(), name='profile_update'),
     path('user/password-change/', PasswordChangeView.as_view(), name='password_change'),

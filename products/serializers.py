@@ -67,3 +67,10 @@ class ProductSerializer(serializers.ModelSerializer):
         return obj.get_category_breadcrumb2()
     
 
+
+class ProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ["slug"]
+
+

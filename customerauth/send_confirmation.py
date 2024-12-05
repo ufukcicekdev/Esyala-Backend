@@ -55,3 +55,9 @@ def send_welcome_email(user):
     })
 
     send_email_via_smtp2go([user.email], subject, message)
+
+
+
+def send_change_password_email(user, subject, email_content):
+
+    send_email_via_smtp2go(user, subject, email_content)

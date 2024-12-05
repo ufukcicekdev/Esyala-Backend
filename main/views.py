@@ -341,8 +341,6 @@ class GetCategoryProductListView(generics.ListAPIView):
                 Prefetch('wishes', queryset=wishlist_model.objects.all())
             ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
 
-
-            
             return queryset
 
         else:
@@ -350,26 +348,19 @@ class GetCategoryProductListView(generics.ListAPIView):
             category_slug_list = category_slug.split('/')
             main_category = get_object_or_404(Category, slug=category_slug_list[0])
 
-            subcategories = main_category.children.all()
-
-            breadcrumb_categories = [{
-                "name": main_category.name,
-                "slug": main_category.slug
-            }]
-
             if len(category_slug_list) == 1:
-                category_query = Q(category__in=main_category.children.all())
+                # If no subcategory, filter by the main category
+                queryset = Product.objects.filter(
+                    category__in=main_category.children.all(),
+                    is_active=True
+                ).select_related('category').order_by('id')
             else:
+                # If there's a subcategory, filter by that subcategory
                 target_category = get_object_or_404(Category, slug=category_slug_list[-1])
-                breadcrumb_categories.append({
-                    "name": target_category.name,
-                    "slug": target_category.slug
-                })
-                category_query = Q(category=target_category)
-
-            queryset = Product.objects.filter(category_query, is_active=True).select_related('category').order_by('id')
-
- 
+                queryset = Product.objects.filter(
+                    category=target_category,
+                    is_active=True
+                ).select_related('category').order_by('id')
 
             return queryset
 
@@ -379,8 +370,7 @@ class GetCategoryProductListView(generics.ListAPIView):
 
         product_count = queryset.count()
 
-        breadcrumb_categories, subcategories = self.get_breadcrumb_and_subcategories()
-
+        # Only returning products and pagination data
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response({
@@ -394,46 +384,73 @@ class GetCategoryProductListView(generics.ListAPIView):
                         "page": request.query_params.get('page', 1),
                         "total_pages": self.paginator.page.paginator.num_pages,
                     },
-                    "category": {
-                        "breadcrumb": breadcrumb_categories, 
-                        "subcategories": [
-                            {"name": sub.name, "slug": sub.slug} for sub in subcategories
-                        ],
-                    },
                 }
             })
 
-        # If no page, return everything
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "status": True,
             "data": {
                 "product": serializer.data,
                 "product_count": product_count,
-                "category": {
-                    "breadcrumb": breadcrumb_categories, 
-                    "subcategories": [
-                        {"name": sub.name, "slug": sub.slug} for sub in subcategories
-                    ],
-                }
             }
         }, status=status.HTTP_200_OK)
 
+
+
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')
+@method_decorator(vary_on_cookie, name='dispatch')
+class GetProductCategoryListView(generics.ListAPIView):
+    serializer_class = CategoryProductSerializers
+    permission_classes = [AllowAny]
+
+
+    def get_queryset(self):
+        category_slug = self.kwargs.get('category_slugs', '')
+        # if not category_slug:
+        #     return Category.objects.none()  # Hiçbir şey döndürme
+
+        category_slug_list = category_slug.split('/')
+        main_category = get_object_or_404(Category, slug=category_slug_list[0])
+
+        if len(category_slug_list) == 1:
+            return main_category.children.all()
+        else:
+            target_category = get_object_or_404(Category, slug=category_slug_list[-1])
+            return target_category.product_set.all()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        breadcrumb_categories, subcategories = self.get_breadcrumb_and_subcategories()
+
+        response_data = {
+            "status": True,
+            "data": {
+                "category": {
+                    "breadcrumb": breadcrumb_categories,
+                    "subcategories": [
+                        {"name": sub.name, "slug": sub.slug} for sub in subcategories
+                    ],
+                },
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
     def get_breadcrumb_and_subcategories(self):
-        # Handle breadcrumbs and subcategories
-        category_slug = self.kwargs.get('category_slugs')
+        category_slug = self.kwargs.get('category_slugs', '')
         breadcrumb_categories = []
         subcategories = []
-        
+
         if category_slug == 'rental':
             breadcrumb_categories = [{
                 "name": "Kiralık Ürünler",
                 "slug": "rental"
             }]
-            subcategories = []  # No subcategories for rental
         else:
             category_slug_list = category_slug.split('/')
             main_category = get_object_or_404(Category, slug=category_slug_list[0])
+
             breadcrumb_categories.append({
                 "name": main_category.name,
                 "slug": main_category.slug
@@ -448,6 +465,10 @@ class GetCategoryProductListView(generics.ListAPIView):
                 })
 
         return breadcrumb_categories, subcategories
+ 
+
+
+
 
 
 

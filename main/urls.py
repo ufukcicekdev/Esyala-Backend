@@ -17,6 +17,9 @@ urlpatterns = [
     path('get_brand/', GetBrand.as_view(), name='get_brand'),
 
     path("category/<path:category_slugs>/", GetCategoryProductListView.as_view(), name="get_category_product_list"),
+    path("productCategoryList/<path:category_slugs>/", GetProductCategoryListView.as_view(), name="get_category_product_list"),
+
+
     path("category/rental", RentalProductView.as_view(), name="rental_product_list_view"),
     path("category/sales", SalesProductView.as_view(), name="sales_product_list_view"),
 
