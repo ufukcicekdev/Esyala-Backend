@@ -27,7 +27,7 @@ DEBUG=bool(strtobool(os.getenv('DEBUG_VALUE')))
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*","esyala-backend-production.up.railway.app"]
 
