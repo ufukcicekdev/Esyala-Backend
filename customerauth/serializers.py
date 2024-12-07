@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -140,6 +141,15 @@ class NotificationSettingsSerializer(serializers.ModelSerializer):
         return instance
 
 
+
+
+class ProfileViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'birth_date', 'tckn']
+
+
+
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         write_only=True,
@@ -154,7 +164,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         error_messages={"blank": "Ad boş bırakılamaz."}
     )
     last_name = serializers.CharField(write_only=True, required=True, allow_blank=False,
-        error_messages={"blank": "Ad boş bırakılamaz."})
+        error_messages={"blank": "Soyad boş bırakılamaz."})
 
     email = serializers.EmailField(
         write_only=True, 
@@ -180,39 +190,48 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ['username', 'first_name', 'last_name', 'email', 'birth_date', 'tckn']
         
     def validate_tckn(self, value):
+        # TC Kimlik No'nun yalnızca sayısal olmasını kontrol et
         if not value.isdigit():
             raise serializers.ValidationError('TC Kimlik No yalnızca sayısal karakterler içermelidir.')
         
+        # TC Kimlik No'nun uzunluğunun 11 olması gerektiğini kontrol et
         if len(value) != 11:
             raise serializers.ValidationError('TC Kimlik No 11 haneli olmalıdır.')
         
+        # Eğer TC Kimlik No başka bir kullanıcı tarafından kullanılıyorsa hata ver
         if User.objects.filter(tckn=value).exclude(pk=self.instance.pk).exists():
             raise serializers.ValidationError('Bu TC Kimlik No zaten başka bir kullanıcı tarafından kullanılıyor.')
+
+        # TC Kimlik No'nun doğrulanması
+        tc_kimlik_no = value
+        ad = self.initial_data.get('first_name')
+        soyad = self.initial_data.get('last_name')
+        birth_date = self.initial_data.get("birth_date")
+        if isinstance(birth_date, str):
+            birth_date = datetime.strptime(birth_date, "%Y-%m-%d").date()
+        dogum_yili = birth_date.year
+
+        sorgu = TCKimlikNoSorgula(tc_kimlik_no, ad, soyad, dogum_yili)
+        sonuc = sorgu.sorgula()
+
+        if not sonuc:
+            raise serializers.ValidationError("TC Kimlik No doğrulanamadı.")
         
         return value
 
     def update(self, instance, validated_data):
+        # Profil verilerini güncelle
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.email = validated_data.get('email', instance.email)
         instance.birth_date = validated_data.get('birth_date', instance.birth_date)
         
-        tc_kimlik_no = validated_data.get('tckn')
-        ad = instance.first_name
-        soyad = instance.last_name
-        dogum_yili = instance.birth_date.year
-        
-        sorgu = TCKimlikNoSorgula(tc_kimlik_no, ad, soyad, dogum_yili)
-        sonuc = sorgu.sorgula()
-        
-        if sonuc:
-            instance.verified = True  # Doğrulandıysa verified alanını güncelle
-        else:
-            raise serializers.ValidationError({"tckn": "TC Kimlik No doğrulanamadı."})
+        # Eğer TC Kimlik No doğrulandıysa verified alanını güncelle
+        tc_kimlik_no = validated_data.get('tckn', instance.tckn)
+        instance.verified = True  # TC Kimlik No doğrulandıysa verified True yapılır
         
         instance.save()
         return instance
-    
 
 
 class PasswordChangeSerializer(serializers.Serializer):

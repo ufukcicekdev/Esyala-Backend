@@ -181,8 +181,8 @@ class GetAboutPage(generics.ListAPIView):
 
 
 
-@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
-@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+# @method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+# @method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
 class CategoryAPIView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, *args, **kwargs):

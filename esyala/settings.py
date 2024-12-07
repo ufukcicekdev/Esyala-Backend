@@ -27,7 +27,7 @@ DEBUG=bool(strtobool(os.getenv('DEBUG_VALUE')))
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*","esyala-backend-production.up.railway.app"]
 
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "drf_spectacular",
+    "storages",
 ]
 
 #application
@@ -151,10 +152,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-MEDIA_URL = '/media/'
+
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-STATIC_URL = 'https://filestorages.fra1.cdn.digitaloceanspaces.com/esyabul/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -166,15 +166,51 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-AWS_ACCESS_KEY_ID = os.getenv('DEV_AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('DEV_AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.getenv('DEV_AWS_STORAGE_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = os.getenv('DEV_AWS_S3_CUSTOM_DOMAIN')
-AWS_DEFAULT_ACL = os.getenv('DEV_AWS_DEFAULT_ACL')
-AWS_S3_REGION_NAME = os.getenv("DEV_AWS_S3_REGION_NAME")
-AWS_S3_ENDPOINT_URL = os.getenv("DEV_AWS_S3_ENDPOINT_URL")
-AWS_LOCATION = os.getenv("DEV_AWS_LOCATION")
-DEFAULT_FILE_STORAGE = 'esyala.storage_backends.CustomS3Boto3Storage'
+
+AWS_ACCESS_KEY_ID = os.getenv('PROD_AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('PROD_AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('PROD_AWS_STORAGE_BUCKET_NAME')
+AWS_S3_CUSTOM_DOMAIN = os.getenv('PROD_AWS_S3_CUSTOM_DOMAIN', f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com')
+AWS_DEFAULT_ACL = os.getenv('PROD_AWS_DEFAULT_ACL', 'public-read')
+AWS_S3_REGION_NAME = os.getenv('PROD_AWS_S3_REGION_NAME')
+AWS_S3_ENDPOINT_URL = os.getenv("PROD_AWS_S3_ENDPOINT_URL")
+AWS_LOCATION = os.getenv("PROD_AWS_LOCATION", 'media')  # S3'teki media dizini
+AWS_S3_FILE_OVERWRITE = False  # Dosya ismi çakışmalarını önlemek için
+
+# Default dosya yükleme depolama backend ayarı
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# Statik dosyalar için S3 yapılandırması
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# STORAGES ayarları
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "custom_domain": AWS_S3_CUSTOM_DOMAIN,
+            "region_name": AWS_S3_REGION_NAME,
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
+            "default_acl": AWS_DEFAULT_ACL,
+            "file_overwrite": AWS_S3_FILE_OVERWRITE,
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "custom_domain": AWS_S3_CUSTOM_DOMAIN,
+            "region_name": AWS_S3_REGION_NAME,
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
+            "default_acl": AWS_DEFAULT_ACL,
+        },
+    },
+}
+
+# Media ve statik URL ayarları
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+STATIC_URL = f'ttps://filestorages.fra1.cdn.digitaloceanspaces.com/esyabul/static2/'
 
 
 

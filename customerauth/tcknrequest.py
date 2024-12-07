@@ -20,7 +20,7 @@ class TCKimlikNoSorgula:
             'Soyad': self.soyad,
             'DogumYili': self.dogum_yili
         }
-
+        print("parameters",parameters)
         response = client.service.TCKimlikNoDogrula(**parameters)
 
         return response

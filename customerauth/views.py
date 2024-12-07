@@ -168,6 +168,22 @@ class LogoutView(TokenBlacklistView):
         return Response({"message": "Çıkış işlemi başarılı."}, status=status.HTTP_205_RESET_CONTENT)
 
 
+
+class ProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]  
+
+    def get(self, request, user_id, *args, **kwargs):
+        try:
+            profile = get_object_or_404(User, id=request.user.id)   # User'a ait profili al
+        except User.DoesNotExist:
+            return Response({"error": "Profile not found"}, status=404)
+
+        serializer = ProfileViewSerializer(profile)
+ 
+        return Response(serializer.data)
+        
+
+
 class ProfileUpdateAPIView(APIView):
     permission_classes = [IsAuthenticated]  #TODO: düzetilecek
     serializer_class = ProfileUpdateSerializer
@@ -178,9 +194,13 @@ class ProfileUpdateAPIView(APIView):
         
         if serializer.is_valid():
             serializer.save()
-            return Response({"detail": "Profiliniz başarıyla güncellendi."}, status=status.HTTP_200_OK)
+            return Response({"status":True, "message": "Profiliniz başarıyla güncellendi."}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not serializer.is_valid():
+                messages_list = []
+                for key, value in serializer.errors.items():
+                    messages_list.extend(value) 
+            return Response({ "status":False, "message":messages_list }, status=status.HTTP_400_BAD_REQUEST)
         
 
 class NotificationSettingsAPI(APIView):
@@ -198,7 +218,7 @@ class NotificationSettingsAPI(APIView):
         
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Bildirimler Güncellendi"}, status=status.HTTP_200_OK)
+            return Response({ "status":True, "message": "Bildirimler Güncellendi"}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         

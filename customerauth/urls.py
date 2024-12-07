@@ -25,7 +25,8 @@ urlpatterns = [
 
 
     #UserProfile
-    path('user/profile/update/', ProfileUpdateAPIView.as_view(), name='profile_update'),
+    path('user/profile/<int:user_id>', ProfileAPIView.as_view(), name='profile_view'),
+    path('user/profile/update/<int:user_id>', ProfileUpdateAPIView.as_view(), name='profile_update'),
     path('user/password-change/', PasswordChangeView.as_view(), name='password_change'),
     path('user/change-email/', ChangeEmailAPIView.as_view(), name='change_email'),
 
