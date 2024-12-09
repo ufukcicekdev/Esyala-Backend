@@ -314,3 +314,21 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetVerifySerializer(serializers.Serializer):
     email= serializers.EmailField(required=True)
     otp = serializers.CharField(max_length=6, required=True)
+
+
+
+
+class CitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        fields = ['name'] 
+
+class DistrictdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = District
+        fields = ['name'] 
+
+class NeighborhoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Neighborhood
+        fields = ['name'] 

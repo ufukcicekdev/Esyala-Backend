@@ -56,11 +56,14 @@ urlpatterns = [
     path('user/wishlist/remove/<int:wish_id>', RemoveFromWishlistAPIView.as_view(), name='remove_wishlist'),
 
     #OrderList
-    path('user/orderlist/', OrderListAPIView.as_view(), name='orderlist'),
+    path('user/orderlist/<int:user_id>', OrderListAPIView.as_view(), name='orderlist'),
+    path('user/orderdetail/<int:user_id>/<str:order_number>/', OrderDetailAPIView.as_view(), name='orderdetail'),
 
 
 
-    path('user/notifications/', NotificationSettingsAPI.as_view(), name='api_notifications'),
+
+
+    path('user/notifications/<int:user_id>', NotificationSettingsAPI.as_view(), name='api_notifications'),
 
 ]
 
