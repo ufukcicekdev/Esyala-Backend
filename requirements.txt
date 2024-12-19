@@ -94,7 +94,7 @@ tzlocal==5.2
 uritemplate==4.1.1
 uritools==4.0.3
 urllib3==2.2.3
-weasyprint==63.1
+#weasyprint==63.1
 webencodings==0.5.1
 xhtml2pdf==0.2.16
 zeep==4.3.1

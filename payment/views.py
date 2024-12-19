@@ -26,7 +26,7 @@ from django.views.decorators.http import require_http_methods
 from main.models import *
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from weasyprint import HTML
+#from weasyprint import HTML
 from esyala.settings import DEBUG
 load_dotenv()
 
@@ -475,10 +475,10 @@ def generate_and_upload_pdf(order_number):
         
         html_content = render_to_string('pdfTemplates/order_pdf_template.html', {'order': order, 'order_items': order_items})
         
-        pdf_file = HTML(string=html_content).write_pdf()
+        #pdf_file = HTML(string=html_content).write_pdf()
 
         file_name = f'{order_number}.pdf'
-        file_path = default_storage.save(f'order_pdf_documents/{file_name}', ContentFile(pdf_file))
+        file_path = default_storage.save(f'order_pdf_documents/{file_name}', ContentFile(html_content))
         
         order.order_pdf_document = file_path
         order.save()
