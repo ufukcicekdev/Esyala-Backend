@@ -220,7 +220,7 @@ class Product(models.Model):
             return 0
         
     def get_absolute_url(self):
-        return reverse('products:product-detail-view', kwargs={'product_slug': self.slug})
+        return reverse('products:product_detail_api', kwargs={'product_slug': self.slug})
         
     def get_category_breadcrumb(self):
         breadcrumbs = []
@@ -269,26 +269,25 @@ class Product(models.Model):
         return truncated_text
     
     def get_star_list(self):
-        """
-        Ortalama puanı yıldızlara dönüştürür. Örneğin, 3.5 ortalama için [True, True, True, False, False] döner.
-        """
-        # average_rating alanını hesapla
         average_rating = self.reviews.aggregate(average=Avg('rating'))['average']
-        
         if average_rating is not None:
             full_stars = math.floor(average_rating)
             half_star = (average_rating - full_stars) >= 0.5
-            star_list = [True] * full_stars + [False] * (5 - full_stars)
-            if half_star and full_stars < 5:
-                star_list[full_stars] = False  # Yarım yıldız ekleyin
+            star_list = [True] * full_stars
+            if half_star:
+                star_list.append("half")
+            remaining_stars = 5 - len(star_list)
+            star_list.extend([False] * remaining_stars)
+            
             return star_list
         return [False] * 5
+      
 
 class ProductReview(models.Model):
     user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews', verbose_name="Ürün")
     rating = models.IntegerField(verbose_name="Puan") 
-    comment = models.TextField(blank=True, verbose_name="Yorum")  
+    comment = models.TextField(blank=True,null=True, verbose_name="Yorum")  
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
 
 
@@ -372,20 +371,47 @@ class ProductRentalPrice(models.Model):
         return self.get_name_display()
     
 
+
 class Cart(models.Model):
-    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE,null=True, blank=True)
-    session_key = models.CharField(max_length=50, blank=True, null=True)
-    items = models.ManyToManyField('CartItem', related_name='carts')
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    session_key = models.CharField(max_length=250, blank=True, null=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     order_completed = models.BooleanField(default=False)
-    def total_price(self):
-        total = 0
-        for item in self.items.all():
-            total += item.subtotal()
-        return total
+
     
-    
+    def get_cart_items(self):
+        return CartItem.objects.filter(cart=self)
+
+    @staticmethod
+    def get_or_create_cart(request, session_key=None):
+        if request.user.is_authenticated:
+            cart = Cart.objects.filter(user=request.user, order_completed=False).first()
+            if not cart:
+                cart = Cart.objects.create(user=request.user)
+        elif session_key:
+            cart = Cart.objects.filter(session_key=session_key, order_completed=False).first()
+            if not cart:
+                cart = Cart.objects.create(session_key=session_key)
+        else:
+            session_key = request.session.session_key
+            if not session_key:
+                request.session.create()
+                session_key = request.session.session_key
+
+            cart = Cart.objects.filter(session_key=session_key, order_completed=False).first()
+            if not cart:
+                cart = Cart.objects.create(session_key=session_key)
+
+        if request.user.is_authenticated and cart.user is None:
+            cart.user = request.user
+            cart.save()
+
+        return cart
+
+
+
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -406,4 +432,22 @@ class CartItem(models.Model):
         
 
 
+class Question(models.Model):
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE) 
+    question_text = models.TextField() 
+    created_at = models.DateTimeField(auto_now_add=True) 
+    is_answered = models.BooleanField(default=False) 
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions', verbose_name="Ürün")
 
+    def __str__(self):
+        return f"Soru: {self.question_text[:30]}" 
+
+
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')  
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)  
+    answer_text = models.TextField()  # Cevabın metni
+    created_at = models.DateTimeField(auto_now_add=True)  
+
+    def __str__(self):
+        return f"Cevap: {self.answer_text[:30]}" 

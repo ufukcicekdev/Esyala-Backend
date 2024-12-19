@@ -118,32 +118,36 @@ class GetBlogDetailViews(APIView):
     def get_queryset(self):
         blog_slug = self.kwargs.get('slug')
         return Blog.objects.filter(slug=blog_slug, is_active=True)
-        
+
     def get(self, request, *args, **kwargs):
         try:
             queryset = self.get_queryset()
-            if not queryset.exists():
-                message = 'Şu anda ilgili bloğa erişilemiyor, blog silinmiş olabilir.'
-                tags = "success"
-                blog = queryset.first()  
-                if blog:  
-                    blog.views += 1
-                    blog.save()
-                return Response({
-                    "status": True,
-                    "messages": [{'message': message, 'tags': tags}]
-                }, status=status.HTTP_200_OK)
+            blog = queryset.first()  # İlk bloğu alıyoruz
 
-            serializer = self.serializer_class(queryset, many=True)
+            if not blog:  # Blog bulunamadıysa
+                message = 'Şu anda ilgili bloğa erişilemiyor, blog silinmiş olabilir.'
+                return Response({
+                    "status": False,
+                    "messages": [{'message': message, 'tags': 'error'}]
+                }, status=status.HTTP_404_NOT_FOUND)
+
+     
+            blog.views += 1
+            blog.save()
+
+            # Blog'u serileştir ve döndür
+            serializer = self.serializer_class(blog)  # Tek bir nesne için many=False
             return Response({
                 "status": True,
                 "data": serializer.data
             }, status=status.HTTP_200_OK)
+
         except Exception as e:
             return Response({
                 "status": False,
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

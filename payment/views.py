@@ -23,17 +23,17 @@ from django.core.files.storage import default_storage
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.views.decorators.http import require_http_methods
-from main.decorators import log_request
 from main.models import *
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from weasyprint import HTML
+from esyala.settings import DEBUG
 load_dotenv()
 
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 
 
-if base.DEBUG:
+if DEBUG:
     callbackUrl = os.getenv('DEV_CALLBACK_URL')
     iyzco_api_key = os.getenv('DEV_API_KEY')
     iyzco_secret_key = os.getenv('DEV_SECRET_KEY')
@@ -126,7 +126,6 @@ order_data = {}
 
 @login_required(login_url='customerauth:sign-in')
 @csrf_exempt
-@log_request
 def payment_order(request):
     
     global order_data 
@@ -339,7 +338,6 @@ def create_request_data(order_number, order_total, card_id, callbackUrl, buyer, 
 
 @require_http_methods(["POST"])
 @csrf_exempt
-@log_request
 def result(request):
     print(request)
     global order_data 

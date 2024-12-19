@@ -69,3 +69,16 @@ def send_new_order_message(order, order_total):
 
 
 
+
+def send_new_questions_message(question_data):
+    client = WebClient(token=SLACK_CONTACT_US_TOKEN)
+    channel_id = SLACK_CONTACT_US_CHANNEL_ID
+    bot_name = "ContactBot"
+    try:
+        client.chat_postMessage(
+            channel=channel_id,
+            text=question_data,
+            username=bot_name
+        )
+    except SlackApiError as e:
+        print(f"Error sending message: {e}")

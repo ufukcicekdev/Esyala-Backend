@@ -14,7 +14,7 @@ urlpatterns = [
     path("products/", include("products.urls")),
     path("notification/", include("notification.urls")),
     path("customerauth/", include("customerauth.urls")),
-
+    path("ckeditor5/", include('django_ckeditor_5.urls')),
     path('api/schema/', CustomSpectacularAPIView.as_view(), name='schema'),
 
     # Redoc ve Swagger endpointleri

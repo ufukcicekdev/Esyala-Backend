@@ -4,7 +4,7 @@ from .serializers import *
 from rest_framework import status
 from rest_framework.decorators import  APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView,TokenBlacklistView
+from rest_framework_simplejwt.views import TokenObtainPairView,TokenBlacklistView,TokenRefreshView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from customerauth.send_confirmation import *
@@ -13,6 +13,10 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from customerauth.models import *
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework_simplejwt.exceptions import TokenError
+
 
 class VerifyEmailView(APIView):
     def get(self, request, uidb64, token):
@@ -76,6 +80,40 @@ class TokenVerifyView(APIView):
                 "vendor_id": getattr(user, 'vendor', None).id if hasattr(user, 'vendor') else None
             }
         })
+
+
+
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    @method_decorator(csrf_exempt)
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get('refresh')
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        try:
+            refresh = RefreshToken(refresh_token)
+            access_token = refresh.access_token
+            response = Response({
+                'access': str(access_token),
+            })
+            response.set_cookie(
+                'refresh_token', str(refresh),
+                httponly=True,  
+                secure=True,  
+                samesite='Strict',  
+            )
+            return response
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 
@@ -160,13 +198,23 @@ class UserLoginView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LogoutView(TokenBlacklistView):
+class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        response = super().post(request)  
-        return Response({"message": "Çıkış işlemi başarılı."}, status=status.HTTP_205_RESET_CONTENT)
-
+        refresh_token = request.data.get("refresh", None)
+        if not refresh_token:
+            return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist() 
+            return Response({"status":True, "message": "Çıkış işlemi başarılı."}, status=status.HTTP_200_OK)
+        
+        except TokenError:  # InvalidToken yerine daha spesifik hata
+            return Response({"status":False, "message": "Geçersiz token."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"status":False, "message": "Bilinmeyen bir hata oluştu.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
 
 class ProfileAPIView(APIView):

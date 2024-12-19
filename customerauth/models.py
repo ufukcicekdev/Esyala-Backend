@@ -110,23 +110,31 @@ class AddressType(models.Model):
 
     def __str__(self):
         return self.name
+    
+class AddressModel(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 
 
 class Address(models.Model):
     user = models.ForeignKey(User, related_name='addresses', on_delete=models.CASCADE)
-    username = models.CharField(max_length=255)  # max_length eklenmiştir
-    usersurname = models.CharField(max_length=255)  # max_length eklenmiştir
+    username = models.CharField(max_length=255)  
+    usersurname = models.CharField(max_length=255)  
     phone = models.CharField(max_length=255)
     address_type = models.ForeignKey(AddressType, related_name='addresses', on_delete=models.SET_NULL, null=True)
+    address_model = models.ForeignKey(AddressModel, related_name='addresses', on_delete=models.SET_NULL, null=True)
     address_name = models.CharField(max_length=255, help_text="Açıklayıcı bir ad (örn. Ev Adresi, İş Adresi)")
     address_line1 = models.CharField(max_length=255)
     postal_code = models.CharField(max_length=10)
     is_default = models.BooleanField(default=False)  # varsayılan adres mi?
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    firm_name = models.CharField(max_length=255)
-    firm_taxcode = models.CharField(max_length=255)
-    firm_tax_home = models.CharField(max_length=255)
+    firm_name = models.CharField(max_length=255, null=True, blank=True)
+    firm_taxcode = models.CharField(max_length=255, null=True, blank=True)
+    firm_tax_home = models.CharField(max_length=255, null=True, blank=True)
     city = models.ForeignKey(City, to_field='city_id', on_delete=models.SET_NULL, null=True, blank=True)  # Şehir
     region = models.ForeignKey(District, to_field='district_id', on_delete=models.SET_NULL, null=True, blank=True)  # İlçe
     neighborhood = models.ForeignKey(Neighborhood,to_field='neighborhood_id', on_delete=models.SET_NULL, null=True, blank=True)  # Mahalle
@@ -259,7 +267,6 @@ class UserProductView(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.product.name}'
-    
 
 
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from products.models import Product, ProductImage, ProductRentalPrice, RoomType, HomeType, HomeModel, SpaceDefinition, TimeRange, Category, Brand, Supplier
+from products.models import Answer, Product, ProductImage, ProductRentalPrice, Question, RoomType, HomeType, HomeModel, SpaceDefinition, TimeRange, Category, Brand, Supplier
 
 from django.utils.html import format_html
 
@@ -92,3 +92,27 @@ admin.site.register(Category)
 
 
 
+
+
+class AnswerInline(admin.TabularInline):
+    model = Answer
+    extra = 1 
+    readonly_fields = ('created_at',)  
+
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ('question_text', 'user', 'product', 'created_at', 'is_answered')  
+    search_fields = ('question_text', 'user__username', 'product__name')  
+    list_filter = ('is_answered', 'product')  
+    ordering = ('-created_at',)  
+    inlines = [AnswerInline] 
+
+
+class AnswerAdmin(admin.ModelAdmin):
+    list_display = ('question', 'user', 'answer_text', 'created_at') 
+    search_fields = ('answer_text', 'user__username', 'question__question_text')  
+    list_filter = ('created_at',)  
+    ordering = ('-created_at',)  
+
+# Admin sayfasına modelleri kaydetme
+admin.site.register(Question, QuestionAdmin)
+admin.site.register(Answer, AnswerAdmin)

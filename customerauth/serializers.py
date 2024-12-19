@@ -321,14 +321,14 @@ class PasswordResetVerifySerializer(serializers.Serializer):
 class CitySerializer(serializers.ModelSerializer):
     class Meta:
         model = City
-        fields = ['name'] 
+        fields = ['id','name'] 
 
 class DistrictdSerializer(serializers.ModelSerializer):
     class Meta:
         model = District
-        fields = ['name'] 
+        fields = ['district_id','name'] 
 
 class NeighborhoodSerializer(serializers.ModelSerializer):
     class Meta:
         model = Neighborhood
-        fields = ['name'] 
+        fields = ['neighborhood_id','name'] 

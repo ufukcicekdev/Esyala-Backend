@@ -3,6 +3,8 @@ from django.dispatch import receiver
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+
+from products.models import Answer
 from .models import Order
 from dotenv import load_dotenv
 from social_django.models import UserSocialAuth
@@ -135,5 +137,3 @@ def update_email_verified(sender, instance, **kwargs):
     user.email_verified = True
     user.save()
     send_welcome_email(user)
-
-
