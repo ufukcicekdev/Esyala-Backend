@@ -78,7 +78,7 @@ class AddressUpdateView(APIView):
                 address.is_default = True
 
             serializer.save()
-            return Response({"status": True, "address":serializer.data}, status=status.HTTP_200_OK)
+            return Response({"status": True,"message":"Başarıyla Güncellendi", "address":serializer.data}, status=status.HTTP_200_OK)
         return Response({"status": False, "message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 class DeleteAddressView(APIView):
