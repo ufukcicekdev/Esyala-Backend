@@ -15,6 +15,8 @@ from django.urls import reverse
 import math
 from django.db.models import Avg
 from bs4 import BeautifulSoup
+from django.db.models import Q
+
 
 # Oda Tipleri (Living Room, Bedroom, Kitchen vb.)
 class RoomType(models.Model):
@@ -379,35 +381,38 @@ class Cart(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     order_completed = models.BooleanField(default=False)
 
-    
+
     def get_cart_items(self):
         return CartItem.objects.filter(cart=self)
 
     @staticmethod
     def get_or_create_cart(request, session_key=None):
-        if request.user.is_authenticated:
-            cart = Cart.objects.filter(user=request.user, order_completed=False).first()
-            if not cart:
-                cart = Cart.objects.create(user=request.user)
-        elif session_key:
-            cart = Cart.objects.filter(session_key=session_key, order_completed=False).first()
-            if not cart:
-                cart = Cart.objects.create(session_key=session_key)
-        else:
-            session_key = request.session.session_key
-            if not session_key:
-                request.session.create()
-                session_key = request.session.session_key
+        user = request.user if request.user.is_authenticated else None
 
-            cart = Cart.objects.filter(session_key=session_key, order_completed=False).first()
-            if not cart:
+        cart = Cart.objects.filter(
+            Q(user=user) & Q(session_key=session_key),
+            order_completed=False
+        ).first()
+
+        if not cart:
+            if user:
+                cart = Cart.objects.create(user=user, session_key=session_key)
+            else:
+                # Session key kontrolü
+                if not session_key:
+                    session_key = request.session.session_key
+                    if not session_key:
+                        request.session.create()
+                        session_key = request.session.session_key
                 cart = Cart.objects.create(session_key=session_key)
 
-        if request.user.is_authenticated and cart.user is None:
-            cart.user = request.user
+        # 3. Eğer kullanıcı giriş yaptıysa, sepete user'ı bağla
+        if user and not cart.user:
+            cart.user = user
             cart.save()
 
         return cart
+
 
 
 
@@ -451,3 +456,10 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Cevap: {self.answer_text[:30]}" 
+    
+
+
+
+
+
+

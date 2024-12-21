@@ -61,14 +61,15 @@ class ContactUsSerializer(serializers.ModelSerializer):
 
 
 class ProductWithCategoriesSerializer(serializers.ModelSerializer):
-    product_count = serializers.SerializerMethodField()
+    # product_count = serializers.SerializerMethodField()
     class Meta:
         model = Category
-        fields =  ["name","slug","product_count"]
+        # fields =  ["name","slug","product_count"]
+        fields =  ["name","slug"]
 
-    @extend_schema_field(serializers.IntegerField) 
-    def product_count(self, obj):
-        return obj.product_count() 
+    # @extend_schema_field(serializers.IntegerField) 
+    # def product_count(self, obj):
+    #     return obj.product_count() 
 
 
 class BrandSerializer(serializers.ModelSerializer):
@@ -161,16 +162,19 @@ class CategoryProductSerializers(serializers.ModelSerializer):
     discount_percentage = serializers.SerializerMethodField()
     truncated_description = serializers.SerializerMethodField()
     star_list = serializers.SerializerMethodField()
-    room_types = RoomTypeSerializer(many=True, read_only=True)
-    home_types = HomeTypeSerializer(many=True, read_only=True)
-    home_models = HomeModelSerializer(many=True, read_only=True)
-    space_definitions = SpaceDefSerializer(many=True, read_only=True)
-    time_ranges = TimeRangeSerializer(many=True, read_only=True)
+    # room_types = RoomTypeSerializer(many=True, read_only=True)
+    # home_types = HomeTypeSerializer(many=True, read_only=True)
+    # home_models = HomeModelSerializer(many=True, read_only=True)
+    # space_definitions = SpaceDefSerializer(many=True, read_only=True)
+    # time_ranges = TimeRangeSerializer(many=True, read_only=True)
     class Meta:
         model = Product
+        # fields = ['id', 'name', 'slug', 'first_image', 'selling_price','selling_old_price','purchase_price',
+        #         'in_stock', 'brand', 'supplier', 'category','view_count', 'discount_percentage','star_list', 
+        #         'room_types','home_types','home_models', 'space_definitions','time_ranges','truncated_description'] 
         fields = ['id', 'name', 'slug', 'first_image', 'selling_price','selling_old_price','purchase_price',
-                'in_stock', 'brand', 'supplier', 'category','view_count', 'discount_percentage','star_list', 
-                'room_types','home_types','home_models', 'space_definitions','time_ranges','truncated_description'] 
+                'in_stock', 'brand', 'supplier', 'category','view_count', 'discount_percentage','star_list','truncated_description'
+               ] 
     def get_categories(self, obj):
         active_categories = obj.category.filter(is_active=True)
         return ProductWithCategoriesSerializer(active_categories, many=True).data

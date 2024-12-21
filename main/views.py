@@ -1,3 +1,4 @@
+from warnings import filters
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,6 +19,10 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
 from django.utils.decorators import method_decorator
 from slack_send_messages.send_messages import send_contact_message
+from .filter import ProductFilter
+from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
+
 
 @method_decorator(cache_page(60 * 60 * 12), name='dispatch')  # 6 saatlik cache
 @method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
@@ -36,7 +41,7 @@ class GetHomeMainBanner(APIView):
                 tags = "success"
                 return Response({
                     "status": True,
-                    "messages": [{'message': message, 'tags': tags}]
+                    "messages": message
                 }, status=status.HTTP_200_OK)
 
             serializer = self.serializer_class(queryset, many=True)
@@ -47,7 +52,7 @@ class GetHomeMainBanner(APIView):
         except Exception as e:
             return Response({
                 "status": False,
-                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+                "messages": "Bir hata oluştu"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     
@@ -243,13 +248,17 @@ def get_category():
     return main_categories_json
 
 
-class HomepageProductsView(APIView):
+
+    
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+class HomepageBestSellerProductsView(APIView):
     serializer_class = CategoryProductSerializers
     permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
-            key = 'homepage_products'
+            key = 'homepage_best_seller_products'
             cached_products = cache.get(key)
 
             if cached_products:
@@ -259,19 +268,71 @@ class HomepageProductsView(APIView):
                 is_active=True, best_seller=True
             ).prefetch_related('related_products')[:16]
             
+
+            serialized_data = CategoryProductSerializers(best_seller_products, many=True).data
+            cache.set(key, serialized_data, 60 * 60 * 6)  
+            return Response({
+                "status": True,
+                "data": serialized_data
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": "Bir hata oluştu"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+class HomepageFeaturedProductsView(APIView):
+    serializer_class = CategoryProductSerializers
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            key = 'homepage_featured_products'
+            cached_products = cache.get(key)
+
+            if cached_products:
+                return Response(cached_products)
+
             featured_products = Product.objects.filter(
                 is_active=True, is_featured=True
             ).prefetch_related('related_products')[:16]
             
+            serialized_data = CategoryProductSerializers(featured_products, many=True).data
+            cache.set(key, serialized_data, 60 * 60 * 6)  
+            return Response({
+                "status": True,
+                "data": serialized_data
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({
+                "status": False,
+                "messages": "Bir hata oluştu"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
+@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+class HomepageLatestProductsView(APIView):
+    serializer_class = CategoryProductSerializers
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        try:
+            key = 'homepage_latest_products'
+            cached_products = cache.get(key)
+
+            if cached_products:
+                return Response(cached_products)
+
             latest_products = Product.objects.filter(
                 is_active=True
             ).order_by('-created_at').prefetch_related('related_products')[:16]
 
-            serialized_data = {
-                'best_seller_products': CategoryProductSerializers(best_seller_products, many=True).data,
-                'featured_products': CategoryProductSerializers(featured_products, many=True).data,
-                'latest_products': CategoryProductSerializers(latest_products, many=True).data,
-            }
+            serialized_data = CategoryProductSerializers(latest_products, many=True).data
             cache.set(key, serialized_data, 60 * 60 * 6)  
             return Response({
                 "status": True,
@@ -283,6 +344,7 @@ class HomepageProductsView(APIView):
                 "status": False,
                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @method_decorator(cache_page(60 * 60 * 6), name='dispatch')  # 6 saatlik cache
@@ -299,10 +361,9 @@ class GetBrand(APIView):
             queryset = self.get_queryset()
             if not queryset.exists():
                 message = 'Şu anda markalara ulaşılmıyor.'
-                tags = "success"
                 return Response({
                     "status": True,
-                    "messages": [{'message': message, 'tags': tags}]
+                    "messages": message
                 }, status=status.HTTP_200_OK)
 
             serializer = self.serializer_class(queryset, many=True)
@@ -313,64 +374,52 @@ class GetBrand(APIView):
         except Exception as e:
             return Response({
                 "status": False,
-                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+                "messages": "Bir hata oluştu"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
 
-@method_decorator(cache_page(60 * 60 * 6), name='dispatch')
+
+@method_decorator(cache_page(60 * 60 * 12), name='dispatch')
 @method_decorator(vary_on_cookie, name='dispatch')
 class GetCategoryProductListView(generics.ListAPIView):
     serializer_class = CategoryProductSerializers
     permission_classes = [AllowAny]
-    pagination_class = PageNumberPagination 
-
+    pagination_class = PageNumberPagination
+    filter_backends = (DjangoFilterBackend,) 
+    filterset_class = ProductFilter 
     def get_queryset(self):
-        category_slug = self.kwargs.get('category_slugs')  
-        if category_slug == 'rental':
-            # Handle rental-specific case
+        category_slug = self.kwargs.get('category_slugs')
+        # Kategoriye bağlı ürünler
+        category_slug_list = category_slug.split('/')
+        main_category = get_object_or_404(Category, slug=category_slug_list[0])
+
+        if len(category_slug_list) == 1:
+            # Ana kategori altındaki tüm ürünler
             queryset = Product.objects.filter(
+                category__in=main_category.children.all(),
                 is_active=True
-            ).annotate(
-                has_rental_price=Exists(ProductRentalPrice.objects.filter(product=OuterRef('pk')))
-            ).filter(
-                has_rental_price=True
-            ).select_related('category').prefetch_related(
-                Prefetch('related_products', queryset=ProductImage.objects.all()),
-                Prefetch('reviews', queryset=ProductReview.objects.all()),
-                Prefetch('wishes', queryset=wishlist_model.objects.all())
-            ).annotate(average_rating=Avg('reviews__rating')).order_by('id')
-
-            return queryset
-
+            ).select_related('category').order_by('id')
         else:
-            # Handle normal category and subcategory case
-            category_slug_list = category_slug.split('/')
-            main_category = get_object_or_404(Category, slug=category_slug_list[0])
+            # Hedef kategoriye bağlı ürünler
+            target_category = get_object_or_404(Category, slug=category_slug_list[-1])
+            queryset = Product.objects.filter(
+                category=target_category,
+                is_active=True
+            ).select_related('category').order_by('id')
 
-            if len(category_slug_list) == 1:
-                # If no subcategory, filter by the main category
-                queryset = Product.objects.filter(
-                    category__in=main_category.children.all(),
-                    is_active=True
-                ).select_related('category').order_by('id')
-            else:
-                # If there's a subcategory, filter by that subcategory
-                target_category = get_object_or_404(Category, slug=category_slug_list[-1])
-                queryset = Product.objects.filter(
-                    category=target_category,
-                    is_active=True
-                ).select_related('category').order_by('id')
+        # Apply the filter
+        queryset = ProductFilter(self.request.GET, queryset=queryset).qs
 
-            return queryset
+        return queryset
 
+    
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset()  # Filtrelenmiş ürünleri alıyoruz
         page = self.paginate_queryset(queryset)
 
         product_count = queryset.count()
 
-        # Only returning products and pagination data
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response({

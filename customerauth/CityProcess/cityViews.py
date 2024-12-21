@@ -1,12 +1,12 @@
 from rest_framework import status
 from rest_framework.decorators import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from customerauth.CityProcess.cityserializers import *
 from customerauth.models import City, District, Neighborhood
 
 class GetCityAPIView(APIView):
-    permission_classes = [AllowAny]  # TODO: düzetilecek
+    permission_classes = [IsAuthenticated]  
     serializer_class = CitySerializer
 
     def get(self, request):
@@ -32,7 +32,7 @@ class GetCityAPIView(APIView):
 
 
 class GetDistrictAPIView(APIView):
-    permission_classes = [AllowAny]  # TODO: düzetilecek
+    permission_classes = [IsAuthenticated]  
     serializer_class = DistricstSerializer
 
     def get(self, request, city_id):
@@ -60,7 +60,7 @@ class GetDistrictAPIView(APIView):
 
 
 class GetNeighborhoodAPIView(APIView):
-    permission_classes = [AllowAny]  # TODO: düzetilecek
+    permission_classes = [IsAuthenticated] 
     serializer_class = NeighborhoodSerializer
 
     def get(self, request, district_id):

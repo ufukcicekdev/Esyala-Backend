@@ -9,10 +9,10 @@ from customerauth.AddressProcess.addressSerializers import *
 
 
 class AddressListView(APIView):
-    permission_classes = [AllowAny]  #TODO: düzetilecek
+    permission_classes = [IsAuthenticated]  
     serializer_class = AddressListSerializer
     def get(self, request):
-        addresses = Address.objects.filter(user=get_object_or_404(User, id=6))  #TODO: düzetilecek
+        addresses = Address.objects.filter(user=request.user)  
         serializer = AddressListSerializer(addresses, many=True, context={'request': request, 'action': 'list'})
         return Response({"status": True, "address":serializer.data}, status=status.HTTP_200_OK)
 
@@ -47,14 +47,17 @@ class AddressCreateView(APIView):
 
             new_address.save()
 
-            # Serializer ile veri döndürüyoruz
-            return Response(AddressSerializer(new_address).data, status=status.HTTP_201_CREATED)
+            return Response({"status": True, "address":AddressSerializer(new_address).data},status=status.HTTP_201_CREATED)
+        
+        messages_list = []
+        for key, value in serializer.errors.items():
+            messages_list.extend(value)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": False, "message":",".join(messages_list)} ,status=status.HTTP_400_BAD_REQUEST)
 
 
 class AddressUpdateView(APIView):
-    permission_classes = [AllowAny]  #TODO: düzetilecek
+    permission_classes = [IsAuthenticated]  
     serializer_class = AddressSerializer
     def put(self, request, address_id):
         address = get_object_or_404(Address, id=address_id, user=request.user)
@@ -79,7 +82,13 @@ class AddressUpdateView(APIView):
 
             serializer.save()
             return Response({"status": True,"message":"Başarıyla Güncellendi", "address":serializer.data}, status=status.HTTP_200_OK)
-        return Response({"status": False, "message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        messages_list = []
+        for key, value in serializer.errors.items():
+            messages_list.extend(value)
+
+    
+        return Response({"status": False, "message":",".join(messages_list)}, status=status.HTTP_400_BAD_REQUEST)
     
 class DeleteAddressView(APIView):
     permission_classes = [IsAuthenticated] 

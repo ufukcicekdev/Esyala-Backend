@@ -25,8 +25,8 @@ urlpatterns = [
 
 
     #UserProfile
-    path('user/profile/<int:user_id>', ProfileAPIView.as_view(), name='profile_view'),
-    path('user/profile/update/<int:user_id>', ProfileUpdateAPIView.as_view(), name='profile_update'),
+    path('user/profile/', ProfileAPIView.as_view(), name='profile_view'),
+    path('user/profile/update/', ProfileUpdateAPIView.as_view(), name='profile_update'),
     path('user/password-change/', PasswordChangeView.as_view(), name='password_change'),
     path('user/change-email/', ChangeEmailAPIView.as_view(), name='change_email'),
 
@@ -56,14 +56,14 @@ urlpatterns = [
     path('user/wishlist/remove/<int:wish_id>', RemoveFromWishlistAPIView.as_view(), name='remove_wishlist'),
 
     #OrderList
-    path('user/orderlist/<int:user_id>', OrderListAPIView.as_view(), name='orderlist'),
-    path('user/orderdetail/<int:user_id>/<str:order_number>/', OrderDetailAPIView.as_view(), name='orderdetail'),
+    path('user/orderlist/', OrderListAPIView.as_view(), name='orderlist'),
+    path('user/orderdetail/<str:order_number>/', OrderDetailAPIView.as_view(), name='orderdetail'),
 
 
 
 
 
-    path('user/notifications/<int:user_id>', NotificationSettingsAPI.as_view(), name='api_notifications'),
+    path('user/notifications/', NotificationSettingsAPI.as_view(), name='api_notifications'),
 
 ]
 

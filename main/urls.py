@@ -9,7 +9,17 @@ urlpatterns = [
     path("get_home_sub_banner/", GetHomeSubBanner.as_view(), name='get_home_sub_banner'),
     path("get_social_media_links/", GetSocialMediaLinks.as_view(), name='get_social_media_links'),
     path("create_contact_us/", CreateContactUs.as_view(), name='create_contact_us'),
-    path('homepage_products/', HomepageProductsView.as_view(), name='homepage_products'),
+
+
+    path('homepage_best_seller_products/', HomepageBestSellerProductsView.as_view(), name='homepage_best_seller_products'),
+    path('homepage_featured_products/', HomepageFeaturedProductsView.as_view(), name='homepage_featured_products'),
+    path('homepage_latest_products/', HomepageLatestProductsView.as_view(), name='homepage_latest_products'),
+
+
+
+
+
+
     path('about/', GetAboutPage.as_view(), name='get_team_members'),
     path('get_category/', CategoryAPIView.as_view(), name='get_category'),
     path('get_footer_category/', FooterCategoryAPIView.as_view(), name='get_footer_category'),

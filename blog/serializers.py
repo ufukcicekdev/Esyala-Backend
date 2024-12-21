@@ -32,7 +32,7 @@ class GetBlogDetailSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True) 
     class Meta:
         model = Blog
-        fields = ["category", "title", "description", "banner", "slug", "created_at", "views"]
+        fields = ["category", "title", "description", "banner", "slug", "created_at", "views", "short_description"]
 
     @extend_schema_field(serializers.CharField) 
     def get_category(self, obj):

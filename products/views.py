@@ -111,7 +111,6 @@ class QuestionsCreateView(APIView):
 
 
 
-
 class AddToCartView(APIView):
     permission_classes = [AllowAny]
 
@@ -122,81 +121,66 @@ class AddToCartView(APIView):
         rental_price = request.data.get('rental_price')
         selling_price = request.data.get('selling_price')
         session_key = request.data.get('session_key')
-        rental_period = request.data.get('rental_period')
 
-        # Giriş doğrulama
+        # Validation
         if not product_id:
             return Response(
                 {"state": False, "messages": "Ürün ID'si zorunludur!"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        if not session_key:
-            return Response(
-                {"state": False, "messages": "Oturum anahtarı gereklidir!"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
-        # Ürünün mevcut olup olmadığını kontrol et
+        # Ürün kontrolü
         try:
             product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response(
-                {"state": False, "messages": "Ürün Bulunamadı!"},
+                {"state": False, "messages": "Ürün bulunamadı!"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
         try:
+            # Sepeti bul veya oluştur
             cart = Cart.get_or_create_cart(request, session_key=session_key)
 
-            # Aynı ürünü kiralık veya satılık türde ekleme kontrolü
             existing_cart_item = CartItem.objects.filter(
                 cart=cart,
-                product=product,
+                product=product
             ).first()
 
             if existing_cart_item:
-                if existing_cart_item.is_rental != is_rental:  # Biri kiralık, diğeri satılıksa
-                    existing_type = "kiralık" if existing_cart_item.is_rental else "satılık"
-                    new_type = "kiralık" if is_rental else "satılık"
-                    return Response(
-                        {"state": False, "messages": f"Bu ürün zaten {existing_type} olarak sepette mevcut. {new_type} olarak ekleyemezsiniz!"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                else:
-                    return Response(
-                        {"state": False, "messages": "Bu ürün zaten sepette mevcut!"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                return Response(
+                    {"state": False, "messages": "Bu ürün zaten sepette mevcut!"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-            cart_item = CartItem.objects.create(
+            # Yeni sepet öğesi oluştur
+            CartItem.objects.create(
                 cart=cart,
                 product=product,
                 quantity=quantity,
                 is_rental=is_rental,
                 rental_price=rental_price,
-                selling_price=selling_price,
-                rental_period=rental_period
+                selling_price=selling_price
             )
 
-            # Sepet verilerini serialize et
             cart_data = CartSerializer(cart).data
-
             return Response(
-                {"state": True, "messages": "Ürün Sepete Eklendi", "cart": cart_data},
+                {"state": True, "messages": "Ürün sepete eklendi!", "cart": cart_data},
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
-            # Beklenmeyen hata durumu
             return Response(
                 {"state": False, "messages": "Bir hata oluştu!", "error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
+
 class GetCartView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request): 
+    def post(self, request):
         try:
             session_key = request.data.get('session_key') 
             user = request.user if request.user.is_authenticated else None
@@ -206,18 +190,19 @@ class GetCartView(APIView):
 
             cart = Cart.get_or_create_cart(request, session_key)
 
-            # Eğer kullanıcı login olmuşsa, sepetin user'ını güncelle
-            if user and cart.session_key:
+            # Eğer kullanıcı giriş yaptıysa, sepeti kullanıcıya bağla
+            if user and cart.user is None:
                 cart.user = user
                 cart.save()
 
-            # Sepeti serialize edip döndür
             cart_data = CartSerializer(cart).data
-            return Response({ "state": True, "cart": cart_data}, status=status.HTTP_200_OK)
+            return Response({ "state": True, "cart": cart_data }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({ "state": False, "messages": f"Sepet verisi çekilirken bir sorun oluştu: {str(e)}" }, status=status.HTTP_404_NOT_FOUND)
-
+            return Response(
+                { "state": False, "messages": f"Sepet verisi çekilirken bir sorun oluştu: {str(e)}" },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 

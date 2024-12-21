@@ -16,6 +16,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.exceptions import AuthenticationFailed
 
 
 class VerifyEmailView(APIView):
@@ -70,17 +71,36 @@ class TokenVerifyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-      
-        user = request.user
-        return Response({
-            "message": "Token is valid",
-            "user": {
-                "username": user.username,
-                "email": user.email,
-                "vendor_id": getattr(user, 'vendor', None).id if hasattr(user, 'vendor') else None
-            }
-        })
+        try:
+            user = request.user
+            
+            if not user.is_authenticated:
+                raise AuthenticationFailed( 'User is not authenticated')
 
+            vendor_id = None
+            if hasattr(user, 'vendor') and user.vendor:
+                vendor_id = user.vendor.id
+
+            return Response({
+                "status": True,
+                "user": {
+                    "username": user.username,
+                    "email": user.email,
+                    "vendor_id": vendor_id
+                }
+            })
+
+        except AuthenticationFailed as e:
+            return Response({
+                "status": False,
+                "message": str(e)
+            }, status=status.HTTP_401_UNAUTHORIZED)  
+
+        except Exception as e:
+            return Response({
+                "status": False,
+                "message": f"An unexpected error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
 
 
 
@@ -92,7 +112,7 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         if not refresh_token:
             return Response(
-                {"detail": "Refresh token is required."},
+                { "status":False, "message": "Refresh token is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         
@@ -100,18 +120,13 @@ class CustomTokenRefreshView(TokenRefreshView):
             refresh = RefreshToken(refresh_token)
             access_token = refresh.access_token
             response = Response({
+                "status":True,
                 'access': str(access_token),
             })
-            response.set_cookie(
-                'refresh_token', str(refresh),
-                httponly=True,  
-                secure=True,  
-                samesite='Strict',  
-            )
             return response
         except Exception as e:
             return Response(
-                {"detail": str(e)},
+                { "status":False, "message": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -140,7 +155,11 @@ class UserRegistrationView(APIView):
         send_confirmation_email(user, request)
         return Response({ "status":True, "message": "Kayıt başarılı! Lütfen e-postanızı doğrulayın.", 
                          "token":token}, status=status.HTTP_201_CREATED)
-    return Response({ "status":False, "messages":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    messages_list = []
+    for key, value in serializer.errors.items():
+        messages_list.extend(value) 
+    return Response({ "status":False, "message": ",".join(messages_list) }, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -158,7 +177,7 @@ class UserLoginView(APIView):
             
             return Response({
                 "status": False,
-                "message": messages_list  # Tüm hata mesajları bir liste olarak döner
+                "message": ",".join(messages_list)  # Tüm hata mesajları bir liste olarak döner
             }, status=status.HTTP_400_BAD_REQUEST)
 
         email = serializer.validated_data.get('email')
@@ -194,7 +213,7 @@ class UserLoginView(APIView):
 
         return Response({
             "status": False,
-            "message": ["Email veya şifre yanlış."]
+            "message": "Email veya şifre yanlış."
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -216,24 +235,21 @@ class LogoutView(APIView):
             return Response({"status":False, "message": "Bilinmeyen bir hata oluştu.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
 class ProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]  
 
-    def get(self, request, user_id, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         try:
-            profile = get_object_or_404(User, id=user_id)   # User'a ait profili al
+            profile = get_object_or_404(User, id=request.user.id)  # Burada request.user.id kullanılmalı
         except User.DoesNotExist:
-            return Response({"error": "Profile not found"}, status=404)
+            return Response({"status": False, "message": "Profile not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ProfileViewSerializer(profile)
- 
-        return Response(serializer.data)
-        
+        return Response({"status": True, "data": serializer.data}, status=status.HTTP_200_OK)
 
 
 class ProfileUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticated]  #TODO: düzetilecek
+    permission_classes = [IsAuthenticated]  
     serializer_class = ProfileUpdateSerializer
     
     def put(self, request, *args, **kwargs):
@@ -255,25 +271,32 @@ class NotificationSettingsAPI(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = NotificationSettingsSerializer
 
-    def get(self, request, user_id, *args, **kwargs):
-        user_profile = get_object_or_404(User, id=user_id)
-        serializer = NotificationSettingsSerializer(user_profile)
-        return Response(serializer.data)
+    def get(self, request, *args, **kwargs):
+        try:    
+            user_profile = get_object_or_404(User, id=request.user.id)
+            serializer = NotificationSettingsSerializer(user_profile)
+            return Response({"status": True, "data": serializer.data}, status=status.HTTP_200_OK)
+        except:
+            return Response({"status": False, "message": "Bir sorun oluştu"}, status=status.HTTP_200_OK)
 
-    def put(self, request, user_id, *args, **kwargs):
-        user_profile = get_object_or_404(User, id=user_id)
+    def put(self, request, *args, **kwargs):
+        user_profile = get_object_or_404(User, id=request.user.id)
         serializer = NotificationSettingsSerializer(user_profile, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
             return Response({"status": True, "message": "Bildirimler Güncellendi"}, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not serializer.is_valid():
+                messages_list = []
+                for key, value in serializer.errors.items():
+                    messages_list.extend(value) 
+            return Response({ "status":False, "message":messages_list }, status=status.HTTP_400_BAD_REQUEST)
         
 
 
 class PasswordChangeView(APIView):
-    permission_classes = [AllowAny] #TODO: düzetilecek
+    permission_classes = [IsAuthenticated] 
     serializer_class = PasswordChangeSerializer
 
     def put(self, request, *args, **kwargs):
