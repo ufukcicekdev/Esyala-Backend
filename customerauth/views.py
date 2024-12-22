@@ -214,27 +214,6 @@ class UserLoginView(APIView):
                 "message": "Giriş Başarılı"
             }, status=status.HTTP_200_OK)
 
-            # Çerezleri ayarla
-            response.set_cookie(
-                'access_token', 
-                token['access'], 
-                max_age=3600,  # 1 saat
-                secure=True,  # Üretim ortamında secure=True olacak
-                httponly=True,  # HttpOnly flag
-                samesite='Strict',  # veya 'Lax'
-                path='/'
-            )
-
-            response.set_cookie(
-                'refresh_token', 
-                token['refresh'], 
-                max_age=7 * 24 * 60 * 60,  # 7 gün
-                secure=True,  # Üretim ortamında secure=True olacak
-                httponly=True,  # HttpOnly flag
-                samesite='Strict',  # veya 'Lax'
-                path='/'
-            )
-
             return response
 
         return Response({
