@@ -23,6 +23,7 @@ Django==5.1.2
 django-autoslug==1.9.9
 django-ckeditor-5==0.2.15
 django-cors-headers==4.6.0
+django-filter==24.3
 django-ipware==7.0.1
 django-jazzmin==3.0.1
 django-rest-swagger==2.2.0

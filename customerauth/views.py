@@ -1,5 +1,8 @@
 from django.shortcuts import  get_object_or_404
 from django.contrib.auth import authenticate, login
+
+from customerauth.AddressProcess.addressSerializers import AddressListSerializer, AddressSerializer
+from products.serializers import CartSerializer
 from .serializers import *
 from rest_framework import status
 from rest_framework.decorators import  APIView
@@ -424,3 +427,29 @@ class PasswordResetChangePasswordAPIView(APIView):
             return Response({"message": "Şifreniz başarıyla güncellendi."}, status=status.HTTP_200_OK)
         except PasswordReset.DoesNotExist:
             return Response({"error": "Geçersiz OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+class CheckoutView(APIView):
+
+    def get(self, request):
+        # cart_id ile sepeti al
+        try:
+            cart = Cart.objects.get(user=request.user)
+        except Cart.DoesNotExist:
+            return Response({'error': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Kullanıcının adreslerini al
+        addresses = Address.objects.filter(user=request.user)
+
+        # Sepet verisini serialize et
+        cart_serializer = CartSerializer(cart).data
+        
+        # Adresleri serialize et
+        address_serializer = AddressListSerializer(addresses, many=True)
+
+        # Sepet ve adresleri birleştirip döndür
+        return Response({
+            'cart': cart_serializer,
+            'addresses': address_serializer.data,
+        })

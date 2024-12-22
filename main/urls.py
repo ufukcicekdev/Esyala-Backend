@@ -18,9 +18,7 @@ urlpatterns = [
 
 
 
-
-
-    path('about/', GetAboutPage.as_view(), name='get_team_members'),
+    # path('about/', GetAboutPage.as_view(), name='get_team_members'),
     path('get_category/', CategoryAPIView.as_view(), name='get_category'),
     path('get_footer_category/', FooterCategoryAPIView.as_view(), name='get_footer_category'),
 

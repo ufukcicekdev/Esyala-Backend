@@ -25,7 +25,7 @@ class AddressCreateView(APIView):
         serializer = AddressSerializer(data=request.data, context={'request': request, 'action': 'create'})
         
         if serializer.is_valid():
-            address_model = serializer.validated_data.get('address_model')
+            address_model = request.data.get("address_model")
 
             # address_type için doğru tipte kontrol yapalım
             if address_model == 2:
@@ -64,22 +64,20 @@ class AddressUpdateView(APIView):
         serializer = AddressSerializer(address, data=request.data, partial=True, context={'request': request, 'action': 'update'})
         if serializer.is_valid():
 
-            address_type = serializer.validated_data.get('address_type')
-
-            if address_type == 'delivery':
+            address_type = request.data.get("address_model")
+            if address_type == 2:
                 Address.objects.filter(user=request.user, delivery_addresses=True).update(is_default=False)
-            elif address_type == 'billing':
+            elif address_type == 1:
                 Address.objects.filter(user=request.user, billing_addresses=True).update(is_default=False)
 
-            if address_type == 'delivery':
+            if address_type == 2:
                 address.delivery_addresses = True
                 address.billing_addresses = False
                 address.is_default = True
-            elif address_type == 'billing':
+            elif address_type == 1:
                 address.delivery_addresses = False
                 address.billing_addresses = True
                 address.is_default = True
-
             serializer.save()
             return Response({"status": True,"message":"Başarıyla Güncellendi", "address":serializer.data}, status=status.HTTP_200_OK)
         

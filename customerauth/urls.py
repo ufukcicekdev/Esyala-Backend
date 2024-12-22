@@ -60,10 +60,10 @@ urlpatterns = [
     path('user/orderdetail/<str:order_number>/', OrderDetailAPIView.as_view(), name='orderdetail'),
 
 
-
-
-
     path('user/notifications/', NotificationSettingsAPI.as_view(), name='api_notifications'),
+
+
+    path('checkout/', CheckoutView.as_view(), name='checkout'),
 
 ]
 

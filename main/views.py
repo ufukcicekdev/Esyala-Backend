@@ -152,36 +152,36 @@ class CreateContactUs(generics.CreateAPIView):
                 "messages": [{'Bir hata oluştu: {}'.format(str(e)) }]
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@method_decorator(cache_page(60 * 60 * 24), name='dispatch')  # 6 saatlik cache
-@method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
-class GetAboutPage(generics.ListAPIView):
-    serializer_class = AboutPageSerializer
-    permission_classes = [AllowAny]
+# @method_decorator(cache_page(60 * 60 * 24), name='dispatch')  # 6 saatlik cache
+# @method_decorator(vary_on_cookie, name='dispatch')  # Vary on cookie
+# class GetAboutPage(generics.ListAPIView):
+#     serializer_class = AboutPageSerializer
+#     permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        return TeamMembers.objects.all().order_by('id')
+#     def get_queryset(self):
+#         return TeamMembers.objects.all().order_by('id')
     
-    def get(self, request, *args, **kwargs):
-        try:
-            queryset = self.get_queryset()
-            if not queryset.exists():
-                message = 'Şu anda hakkımızda sayfasına ulaşılmıyor.'
-                tags = "success"
-                return Response({
-                    "status": True,
-                    "messages": [{'message': message, 'tags': tags}]
-                }, status=status.HTTP_200_OK)
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             queryset = self.get_queryset()
+#             if not queryset.exists():
+#                 message = 'Şu anda hakkımızda sayfasına ulaşılmıyor.'
+#                 tags = "success"
+#                 return Response({
+#                     "status": True,
+#                     "messages": [{'message': message, 'tags': tags}]
+#                 }, status=status.HTTP_200_OK)
 
-            serializer = self.serializer_class(queryset, many=True)
-            return Response({
-                "status": True,
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({
-                "status": False,
-                "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#             serializer = self.serializer_class(queryset, many=True)
+#             return Response({
+#                 "status": True,
+#                 "data": serializer.data
+#             }, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({
+#                 "status": False,
+#                 "messages": [{'message': 'Bir hata oluştu: {}'.format(str(e)), 'tags': 'error'}]
+#             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

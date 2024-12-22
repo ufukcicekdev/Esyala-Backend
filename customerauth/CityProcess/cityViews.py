@@ -6,7 +6,7 @@ from customerauth.CityProcess.cityserializers import *
 from customerauth.models import City, District, Neighborhood
 
 class GetCityAPIView(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [AllowAny]  
     serializer_class = CitySerializer
 
     def get(self, request):
@@ -32,7 +32,7 @@ class GetCityAPIView(APIView):
 
 
 class GetDistrictAPIView(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [AllowAny]  
     serializer_class = DistricstSerializer
 
     def get(self, request, city_id):
@@ -60,7 +60,7 @@ class GetDistrictAPIView(APIView):
 
 
 class GetNeighborhoodAPIView(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [AllowAny] 
     serializer_class = NeighborhoodSerializer
 
     def get(self, request, district_id):

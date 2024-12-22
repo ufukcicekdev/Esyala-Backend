@@ -390,7 +390,7 @@ class Cart(models.Model):
         user = request.user if request.user.is_authenticated else None
 
         cart = Cart.objects.filter(
-            Q(user=user) & Q(session_key=session_key),
+            Q(user=user) | Q(session_key=session_key),
             order_completed=False
         ).first()
 
