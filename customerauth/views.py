@@ -2,6 +2,7 @@ from django.shortcuts import  get_object_or_404
 from django.contrib.auth import authenticate, login
 
 from customerauth.AddressProcess.addressSerializers import AddressListSerializer, AddressSerializer
+from esyala import settings
 from products.serializers import CartSerializer
 from .serializers import *
 from rest_framework import status
@@ -177,7 +178,7 @@ class UserLoginView(APIView):
             messages_list = []
             for key, value in serializer.errors.items():
                 messages_list.extend(value)  # Her bir alanın hatalarını ekle
-            
+
             return Response({
                 "status": False,
                 "message": ",".join(messages_list)  # Tüm hata mesajları bir liste olarak döner
@@ -197,22 +198,44 @@ class UserLoginView(APIView):
                 }, status=status.HTTP_201_CREATED)
 
             login(request, user)
-            token = get_tokens_for_user(user)
+            token = get_tokens_for_user(user)  # Token'ları al
 
-            user_data = {
-                "id": user.id,
-                "email": user.email,
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-            }
-
-            return Response({
+            # Çerezleri ayarlıyoruz
+            response = Response({
                 "status": True,
                 "token": token,
-                "user": user_data,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                },
                 "message": "Giriş Başarılı"
             }, status=status.HTTP_200_OK)
+
+            # Çerezleri ayarla
+            response.set_cookie(
+                'access_token', 
+                token['access'], 
+                max_age=3600,  # 1 saat
+                secure=True,  # Üretim ortamında secure=True olacak
+                httponly=True,  # HttpOnly flag
+                samesite='Strict',  # veya 'Lax'
+                path='/'
+            )
+
+            response.set_cookie(
+                'refresh_token', 
+                token['refresh'], 
+                max_age=7 * 24 * 60 * 60,  # 7 gün
+                secure=True,  # Üretim ortamında secure=True olacak
+                httponly=True,  # HttpOnly flag
+                samesite='Strict',  # veya 'Lax'
+                path='/'
+            )
+
+            return response
 
         return Response({
             "status": False,
