@@ -139,7 +139,6 @@ class AddToCartView(APIView):
             )
 
         try:
-            # Sepeti bul veya oluştur
             cart = Cart.get_or_create_cart(request, session_key=session_key)
 
             existing_cart_item = CartItem.objects.filter(
@@ -147,12 +146,25 @@ class AddToCartView(APIView):
                 product=product
             ).first()
 
+            cart = Cart.get_or_create_cart(request, session_key=session_key)
+            existing_cart_item = CartItem.objects.filter(
+                cart=cart,
+                product=product,
+            ).first()
             if existing_cart_item:
-                return Response(
-                    {"state": False, "messages": "Bu ürün zaten sepette mevcut!"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
+                if existing_cart_item.is_rental != is_rental:  # Biri kiralık, diğeri satılıksa
+                    existing_type = "kiralık" if existing_cart_item.is_rental else "satılık"
+                    new_type = "kiralık" if is_rental else "satılık"
+                    return Response(
+                        {"state": False, "messages": f"Bu ürün zaten {existing_type} olarak sepette mevcut. {new_type} olarak ekleyemezsiniz!"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    return Response(
+                        {"state": False, "messages": "Bu ürün zaten sepette mevcut!"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
             # Yeni sepet öğesi oluştur
             CartItem.objects.create(
                 cart=cart,
